@@ -54,24 +54,37 @@ export function getNotifications(userId = 'default') {
   );
 
   const incomingOffers = teamOffers.filter(
-    (o) => (o.candidateId === userId || o.candidateId === 'default') && o.status === 'pending'
+    (o) => o.candidateId === userId || o.candidateId === 'default'
+  );
+
+  const outgoingOffers = teamOffers.filter(
+    (o) => o.recruiterId === userId || (userId === 'default' && o.recruiterId === 'p1') || o.recruiterId === 'default'
   );
 
   const incomingConns = connectionRequests.filter(
-    (c) => (c.receiverId === userId || c.receiverId === 'default') && c.status === 'pending'
+    (c) => c.receiverId === userId || c.receiverId === 'default'
+  );
+
+  const outgoingConns = connectionRequests.filter(
+    (c) => c.senderId === userId || (userId === 'default' && c.senderId === 'p1')
   );
 
   const userAlerts = activityAlerts.filter(
     (a) => a.userId === userId || a.userId === 'default'
   );
 
-  const unreadCount = incomingOffers.length + incomingConns.length + userAlerts.filter(a => !a.read).length;
+  const unreadPendingIncoming = incomingOffers.filter(o => o.status === 'pending').length +
+                                incomingConns.filter(c => c.status === 'pending').length;
+  const unreadAlerts = userAlerts.filter(a => !a.read).length;
+  const unreadCount = unreadPendingIncoming + unreadAlerts;
 
   return {
     unreadCount,
     offers: matchingOffers,
     incomingOffers,
+    outgoingOffers,
     connectionRequests: incomingConns,
+    outgoingRequests: outgoingConns,
     alerts: userAlerts,
   };
 }
@@ -160,20 +173,22 @@ export async function sendTeamOffer({
 }
 
 /**
- * Candidate responds to a team offer (Accept or Decline)
+ * Candidate responds to a team offer (Accept or Decline/Reject)
  */
 export async function respondToTeamOffer({ offerId, status, user }) {
   const offer = teamOffers.find((o) => o.id === offerId);
   if (!offer) throw new Error('Offer not found.');
 
-  if (!['accepted', 'declined'].includes(status)) {
-    throw new Error('Invalid status. Must be "accepted" or "declined".');
+  const normalizedStatus = status === 'rejected' ? 'declined' : status;
+
+  if (!['accepted', 'declined'].includes(normalizedStatus)) {
+    throw new Error('Invalid status. Must be "accepted" or "declined"/"rejected".');
   }
 
-  offer.status = status;
+  offer.status = normalizedStatus;
   offer.respondedAt = Date.now();
 
-  if (status === 'accepted') {
+  if (normalizedStatus === 'accepted') {
     // 1. Establish strong KNOWS / Teammate edge in Graph Database
     try {
       const recId = offer.recruiterId;
@@ -198,7 +213,7 @@ export async function respondToTeamOffer({ offerId, status, user }) {
       userId: offer.recruiterId,
       type: 'offer_accepted',
       title: '🎉 Team Offer Accepted!',
-      message: `${user?.name || offer.candidateName} has accepted your offer to join as ${offer.roleName}!`,
+      message: `${user?.name || offer.candidateName} accepted your team offer for ${offer.roleName}! They are now in your team roster.`,
       createdAt: Date.now(),
     });
   } else {
@@ -208,7 +223,7 @@ export async function respondToTeamOffer({ offerId, status, user }) {
       userId: offer.recruiterId,
       type: 'offer_declined',
       title: 'Offer Declined',
-      message: `${user?.name || offer.candidateName} declined the offer for ${offer.roleName}.`,
+      message: `${user?.name || offer.candidateName} rejected/declined your team offer for ${offer.roleName}.`,
       createdAt: Date.now(),
     });
   }
@@ -216,7 +231,25 @@ export async function respondToTeamOffer({ offerId, status, user }) {
   return {
     success: true,
     offer,
-    message: status === 'accepted' ? 'You joined the team!' : 'Offer declined.',
+    message: normalizedStatus === 'accepted' ? 'You joined the team!' : 'Offer declined.',
+  };
+}
+
+/**
+ * Recruiter cancels or withdraws a sent offer
+ */
+export async function withdrawTeamOffer({ offerId, user }) {
+  const index = teamOffers.findIndex((o) => o.id === offerId);
+  if (index === -1) throw new Error('Offer not found.');
+
+  const offer = teamOffers[index];
+  offer.status = 'withdrawn';
+  offer.respondedAt = Date.now();
+
+  return {
+    success: true,
+    offer,
+    message: 'Offer withdrawn successfully.',
   };
 }
 

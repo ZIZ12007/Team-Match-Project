@@ -481,9 +481,15 @@ export function HowToUseModal({ isOpen, onClose, onSelectTab }) {
 
         {/* Modal Footer */}
         <div className="p-4 bg-[#F4F6FB] border-t-2 border-[#08123B] flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0">
-          <div className="flex items-center gap-2 text-xs font-mono-code text-[#4A5578]">
-            <HeartHandshake className="h-4 w-4 text-[#0052FF]" />
-            <span>Built for both non-technical recruiters & technical founders</span>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-1.5 text-xs font-mono-code text-[#4A5578]">
+            <div className="flex items-center gap-1.5">
+              <HeartHandshake className="h-4 w-4 text-[#0052FF]" />
+              <span>Created by <strong className="text-[#08123B]">George Giovanni Zikoranibuchukwu</strong></span>
+            </div>
+            <span className="hidden sm:inline">•</span>
+            <a href="mailto:georgezikora2@gmail.com" className="text-[#0052FF] font-bold hover:underline">
+              georgezikora2@gmail.com
+            </a>
           </div>
 
           <motion.button

@@ -2,10 +2,11 @@
 
 @layer base {
   :root {
-    --font-display: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    --font-editorial: 'Instrument Serif', Georgia, serif;
+    --font-display: 'Besley', Georgia, serif;
+    --font-editorial: 'Besley', Georgia, serif;
+    --font-serif: 'Merriweather', Georgia, serif;
+    --font-sans: 'Merriweather', Georgia, serif;
     --font-mono: 'JetBrains Mono', monospace;
-    --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     
     --color-navy: #08123B;
     --color-navy-surface: #0E1B4D;

@@ -24,11 +24,15 @@ export function NotificationBubble({
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('offers'); // 'offers' | 'connections' | 'alerts'
+  const [offerSubTab, setOfferSubTab] = useState('received'); // 'received' | 'sent'
+  const [connSubTab, setConnSubTab] = useState('received'); // 'received' | 'sent'
   const [data, setData] = useState({
     unreadCount: 0,
     offers: [],
     incomingOffers: [],
+    outgoingOffers: [],
     connectionRequests: [],
+    outgoingRequests: [],
     alerts: [],
   });
   const [loading, setLoading] = useState(false);
@@ -45,7 +49,9 @@ export function NotificationBubble({
           unreadCount: res.unreadCount || 0,
           offers: res.offers || [],
           incomingOffers: res.incomingOffers || [],
+          outgoingOffers: res.outgoingOffers || [],
           connectionRequests: res.connectionRequests || [],
+          outgoingRequests: res.outgoingRequests || [],
           alerts: res.alerts || [],
         });
       }
@@ -56,13 +62,13 @@ export function NotificationBubble({
 
   useEffect(() => {
     fetchNotifications();
-    const interval = setInterval(fetchNotifications, 6000);
+    const interval = setInterval(fetchNotifications, 4000);
     return () => clearInterval(interval);
   }, [currentUser]);
 
   const showToast = (msg) => {
     setToastMsg(msg);
-    setTimeout(() => setToastMsg(null), 3500);
+    setTimeout(() => setToastMsg(null), 4000);
   };
 
   // Handle Accept / Decline Offer
@@ -76,11 +82,25 @@ export function NotificationBubble({
         } catch (e) {}
         showToast('🎉 Offer accepted! You are now part of the team roster.');
       } else {
-        showToast('Offer declined.');
+        showToast('❌ Offer rejected / declined.');
       }
       await fetchNotifications();
     } catch (err) {
       showToast(err.message || 'Action failed.');
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  // Handle Withdraw Offer
+  const handleWithdrawOffer = async (offerId) => {
+    setProcessingId(offerId);
+    try {
+      await api.withdrawOffer(offerId, token);
+      showToast('Offer withdrawn.');
+      await fetchNotifications();
+    } catch (err) {
+      showToast(err.message || 'Could not withdraw offer.');
     } finally {
       setProcessingId(null);
     }
@@ -112,13 +132,16 @@ export function NotificationBubble({
       await api.markAlertsRead(token, currentUser?.id);
       setData((prev) => ({
         ...prev,
-        unreadCount: prev.incomingOffers.length + prev.connectionRequests.length,
+        unreadCount: prev.incomingOffers.filter(o => o.status === 'pending').length +
+                     prev.connectionRequests.filter(c => c.status === 'pending').length,
         alerts: prev.alerts.map((a) => ({ ...a, read: true })),
       }));
     } catch (e) {}
   };
 
-  const totalActionable = data.incomingOffers.length + data.connectionRequests.length;
+  const pendingIncomingOffers = data.incomingOffers.filter(o => o.status === 'pending');
+  const pendingIncomingConns = data.connectionRequests.filter(c => c.status === 'pending');
+  const totalActionable = pendingIncomingOffers.length + pendingIncomingConns.length;
 
   return (
     <>
@@ -205,7 +228,9 @@ export function NotificationBubble({
                 }`}
               >
                 <Briefcase className="h-3.5 w-3.5" />
-                <span>OFFERS ({data.incomingOffers.length})</span>
+                <span>
+                  OFFERS ({data.incomingOffers.length + (data.outgoingOffers?.length || 0)})
+                </span>
               </button>
 
               <button
@@ -238,109 +263,303 @@ export function NotificationBubble({
               {/* TAB 1: TEAM OFFERS */}
               {activeTab === 'offers' && (
                 <div className="space-y-3">
-                  {data.offers.length === 0 ? (
-                    <div className="py-8 text-center font-mono-code">
-                      <Briefcase className="h-8 w-8 text-[#7382A6] mx-auto mb-2 opacity-50" />
-                      <p className="text-xs font-bold text-[#08123B] uppercase mb-1">
-                        NO ACTIVE TEAM OFFERS
-                      </p>
-                      <p className="text-[11px] text-[#7382A6]">
-                        When recruiters or founders scout you, offers appear here.
-                      </p>
-                    </div>
-                  ) : (
-                    data.offers.map((offer) => (
-                      <div
-                        key={offer.id}
-                        className={`p-3.5 rounded-xl border-2 transition-all ${
-                          offer.status === 'accepted'
-                            ? 'border-[#008A3E] bg-[#EBF7EE]'
-                            : offer.status === 'declined'
-                            ? 'border-gray-300 bg-gray-50 opacity-70'
-                            : 'border-[#08123B] bg-white shadow-[3px_3px_0px_#08123B]'
-                        }`}
-                      >
-                        {/* Offer Header */}
-                        <div className="flex items-start justify-between gap-2 mb-2">
-                          <div className="flex items-center gap-2">
-                            <img
-                              src={offer.recruiterAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(offer.recruiterName)}`}
-                              alt={offer.recruiterName}
-                              className="h-9 w-9 rounded-lg border border-[#08123B] object-cover"
-                            />
-                            <div>
-                              <p className="font-display text-xs font-extrabold text-[#08123B]">
-                                {offer.recruiterName}
-                              </p>
-                              <p className="text-[10px] font-mono-code text-[#4A5578]">
-                                {offer.recruiterCompany || 'Startup Team'}
-                              </p>
-                            </div>
-                          </div>
+                  {/* Offers Sub-tabs: Received vs Sent */}
+                  <div className="flex bg-[#F4F6FB] p-1 rounded-lg border border-[#08123B]/20 text-xs font-mono-code font-bold">
+                    <button
+                      onClick={() => setOfferSubTab('received')}
+                      className={`flex-1 py-1.5 rounded text-center transition-all ${
+                        offerSubTab === 'received'
+                          ? 'bg-[#0052FF] text-white shadow-sm'
+                          : 'text-[#4A5578] hover:text-[#08123B]'
+                      }`}
+                    >
+                      Received Offers ({data.incomingOffers.length})
+                    </button>
+                    <button
+                      onClick={() => setOfferSubTab('sent')}
+                      className={`flex-1 py-1.5 rounded text-center transition-all ${
+                        offerSubTab === 'sent'
+                          ? 'bg-[#0052FF] text-white shadow-sm'
+                          : 'text-[#4A5578] hover:text-[#08123B]'
+                      }`}
+                    >
+                      Sent by You ({data.outgoingOffers?.length || 0})
+                    </button>
+                  </div>
 
-                          <span
-                            className={`px-2 py-0.5 rounded font-mono-code text-[10px] font-bold border ${
+                  {/* SUB-VIEW A: RECEIVED OFFERS */}
+                  {offerSubTab === 'received' && (
+                    <div className="space-y-3">
+                      {data.incomingOffers.length === 0 ? (
+                        <div className="py-8 text-center font-mono-code">
+                          <Briefcase className="h-8 w-8 text-[#7382A6] mx-auto mb-2 opacity-50" />
+                          <p className="text-xs font-bold text-[#08123B] uppercase mb-1">
+                            NO INCOMING TEAM OFFERS
+                          </p>
+                          <p className="text-[11px] text-[#7382A6]">
+                            When founders scout your graph profile, offers arrive here.
+                          </p>
+                        </div>
+                      ) : (
+                        data.incomingOffers.map((offer) => (
+                          <div
+                            key={offer.id}
+                            className={`p-3.5 rounded-xl border-2 transition-all ${
                               offer.status === 'accepted'
-                                ? 'bg-[#008A3E] text-white border-[#008A3E]'
+                                ? 'border-[#008A3E] bg-[#EBF7EE]'
                                 : offer.status === 'declined'
-                                ? 'bg-gray-200 text-gray-700 border-gray-400'
-                                : 'bg-[#FF007A] text-white border-[#FF007A]'
+                                ? 'border-zinc-300 bg-zinc-50 opacity-80'
+                                : 'border-[#08123B] bg-white shadow-[3px_3px_0px_#08123B]'
                             }`}
                           >
-                            {offer.status.toUpperCase()}
-                          </span>
-                        </div>
+                            {/* Offer Header */}
+                            <div className="flex items-start justify-between gap-2 mb-2">
+                              <div className="flex items-center gap-2">
+                                <img
+                                  src={
+                                    offer.recruiterAvatar ||
+                                    `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                                      offer.recruiterName
+                                    )}`
+                                  }
+                                  alt={offer.recruiterName}
+                                  className="h-9 w-9 rounded-lg border border-[#08123B] object-cover"
+                                />
+                                <div>
+                                  <p className="font-display text-xs font-extrabold text-[#08123B]">
+                                    {offer.recruiterName}
+                                  </p>
+                                  <p className="text-[10px] font-mono-code text-[#4A5578]">
+                                    {offer.recruiterCompany || 'Startup Team'}
+                                  </p>
+                                </div>
+                              </div>
 
-                        {/* Offer Details */}
-                        <div className="bg-[#F4F6FB] p-2.5 rounded-lg border border-[#08123B]/10 space-y-1 mb-2.5 font-mono-code text-xs">
-                          <div className="flex justify-between">
-                            <span className="text-[#7382A6]">Role:</span>
-                            <span className="font-bold text-[#08123B]">{offer.roleName}</span>
-                          </div>
-                          {offer.equity && (
-                            <div className="flex justify-between">
-                              <span className="text-[#7382A6]">Package:</span>
-                              <span className="font-bold text-[#0052FF]">{offer.equity} • {offer.comp}</span>
+                              <span
+                                className={`px-2 py-0.5 rounded font-mono-code text-[10px] font-bold border ${
+                                  offer.status === 'accepted'
+                                    ? 'bg-[#008A3E] text-white border-[#008A3E]'
+                                    : offer.status === 'declined'
+                                    ? 'bg-zinc-200 text-zinc-700 border-zinc-400'
+                                    : 'bg-[#FF007A] text-white border-[#FF007A] animate-pulse'
+                                }`}
+                              >
+                                {offer.status === 'pending' ? 'OFFER PENDING' : offer.status.toUpperCase()}
+                              </span>
                             </div>
-                          )}
-                          {offer.note && (
-                            <p className="text-[11px] text-[#4A5578] italic pt-1 border-t border-[#08123B]/10">
-                              "{offer.note}"
-                            </p>
-                          )}
-                        </div>
 
-                        {/* Actions for Pending Offer */}
-                        {offer.status === 'pending' ? (
-                          <div className="flex items-center gap-2 pt-1">
-                            <button
-                              disabled={processingId === offer.id}
-                              onClick={() => handleOfferResponse(offer.id, 'accepted')}
-                              className="flex-1 brutal-btn bg-[#008A3E] text-white py-1.5 text-xs font-display font-extrabold uppercase hover:bg-[#007032] flex items-center justify-center gap-1 shadow-[2px_2px_0px_#08123B]"
-                            >
-                              {processingId === offer.id ? (
-                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                              ) : (
-                                <Check className="h-3.5 w-3.5" />
+                            {/* Offer Details */}
+                            <div className="bg-[#F4F6FB] p-2.5 rounded-lg border border-[#08123B]/10 space-y-1 mb-2.5 font-mono-code text-xs">
+                              <div className="flex justify-between">
+                                <span className="text-[#7382A6]">Role:</span>
+                                <span className="font-bold text-[#08123B]">{offer.roleName}</span>
+                              </div>
+                              {offer.equity && (
+                                <div className="flex justify-between">
+                                  <span className="text-[#7382A6]">Package:</span>
+                                  <span className="font-bold text-[#0052FF]">
+                                    {offer.equity} • {offer.comp}
+                                  </span>
+                                </div>
                               )}
-                              <span>ACCEPT OFFER</span>
-                            </button>
+                              {offer.note && (
+                                <p className="text-[11px] text-[#4A5578] italic pt-1 border-t border-[#08123B]/10">
+                                  "{offer.note}"
+                                </p>
+                              )}
+                            </div>
 
-                            <button
-                              disabled={processingId === offer.id}
-                              onClick={() => handleOfferResponse(offer.id, 'declined')}
-                              className="px-3 py-1.5 rounded-lg border-2 border-[#08123B] bg-white font-mono-code text-xs font-bold text-[#FF007A] hover:bg-[#FFF0F5] shadow-[2px_2px_0px_#08123B]"
-                            >
-                              DECLINE
-                            </button>
+                            {/* Actions for Pending Offer */}
+                            {offer.status === 'pending' ? (
+                              <div className="space-y-1.5 pt-1">
+                                <p className="text-[10px] font-mono-code font-bold text-[#4A5578]">
+                                  Decide whether to join this team:
+                                </p>
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    disabled={processingId === offer.id}
+                                    onClick={() => handleOfferResponse(offer.id, 'accepted')}
+                                    className="flex-1 brutal-btn bg-[#008A3E] text-white py-1.5 text-xs font-display font-extrabold uppercase hover:bg-[#007032] flex items-center justify-center gap-1 shadow-[2px_2px_0px_#08123B]"
+                                  >
+                                    {processingId === offer.id ? (
+                                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                    ) : (
+                                      <Check className="h-3.5 w-3.5" />
+                                    )}
+                                    <span>ACCEPT OFFER</span>
+                                  </button>
+
+                                  <button
+                                    disabled={processingId === offer.id}
+                                    onClick={() => handleOfferResponse(offer.id, 'declined')}
+                                    className="px-3 py-1.5 rounded-lg border-2 border-[#08123B] bg-white font-mono-code text-xs font-bold text-[#FF007A] hover:bg-[#FFF0F5] shadow-[2px_2px_0px_#08123B]"
+                                  >
+                                    REJECT / DECLINE
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="pt-1 flex items-center justify-between font-mono-code text-xs">
+                                <span className={offer.status === 'accepted' ? 'text-[#008A3E] font-bold' : 'text-[#7382A6]'}>
+                                  {offer.status === 'accepted' ? '✓ You accepted and joined this team!' : '✕ You declined this offer.'}
+                                </span>
+                              </div>
+                            )}
                           </div>
-                        ) : (
-                          <p className="text-[10px] font-mono-code text-[#7382A6] text-right">
-                            {offer.status === 'accepted' ? '✓ You joined this team!' : '✕ Offer declined'}
+                        ))
+                      )}
+                    </div>
+                  )}
+
+                  {/* SUB-VIEW B: SENT OFFERS */}
+                  {offerSubTab === 'sent' && (
+                    <div className="space-y-3">
+                      {(data.outgoingOffers || []).length === 0 ? (
+                        <div className="py-8 text-center font-mono-code">
+                          <Send className="h-8 w-8 text-[#7382A6] mx-auto mb-2 opacity-50" />
+                          <p className="text-xs font-bold text-[#08123B] uppercase mb-1">
+                            NO OUTGOING OFFERS SENT
                           </p>
-                        )}
-                      </div>
-                    ))
+                          <p className="text-[11px] text-[#7382A6] mb-3">
+                            Use Team Matcher or click "Extend Offer" on any profile to invite candidates.
+                          </p>
+                          <button
+                            onClick={() => {
+                              setIsOpen(false);
+                              if (onOpenTeamMatcher) onOpenTeamMatcher();
+                            }}
+                            className="brutal-btn bg-[#0052FF] text-white px-3 py-1.5 text-xs font-display font-extrabold uppercase"
+                          >
+                            OPEN TEAM MATCHER
+                          </button>
+                        </div>
+                      ) : (
+                        (data.outgoingOffers || []).map((offer) => (
+                          <div
+                            key={offer.id}
+                            className={`p-3.5 rounded-xl border-2 transition-all ${
+                              offer.status === 'accepted'
+                                ? 'border-[#008A3E] bg-[#EBF7EE] shadow-[3px_3px_0px_#008A3E]'
+                                : offer.status === 'declined'
+                                ? 'border-[#FF007A]/40 bg-[#FFF0F5]'
+                                : offer.status === 'withdrawn'
+                                ? 'border-zinc-300 bg-zinc-50 opacity-70'
+                                : 'border-[#08123B] bg-white shadow-[3px_3px_0px_#08123B]'
+                            }`}
+                          >
+                            {/* Candidate Header */}
+                            <div className="flex items-start justify-between gap-2 mb-2">
+                              <div className="flex items-center gap-2">
+                                <img
+                                  src={
+                                    offer.candidateAvatar ||
+                                    `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                                      offer.candidateName
+                                    )}`
+                                  }
+                                  alt={offer.candidateName}
+                                  className="h-9 w-9 rounded-lg border border-[#08123B] object-cover"
+                                />
+                                <div>
+                                  <p className="font-display text-xs font-extrabold text-[#08123B]">
+                                    To: {offer.candidateName}
+                                  </p>
+                                  <p className="text-[10px] font-mono-code text-[#4A5578]">
+                                    Role: {offer.roleName}
+                                  </p>
+                                </div>
+                              </div>
+
+                              <span
+                                className={`px-2 py-0.5 rounded font-mono-code text-[10px] font-bold border ${
+                                  offer.status === 'accepted'
+                                    ? 'bg-[#008A3E] text-white border-[#008A3E]'
+                                    : offer.status === 'declined'
+                                    ? 'bg-[#FF007A] text-white border-[#FF007A]'
+                                    : offer.status === 'withdrawn'
+                                    ? 'bg-zinc-200 text-zinc-700 border-zinc-400'
+                                    : 'bg-[#FFC700] text-[#08123B] border-[#08123B] animate-pulse'
+                                }`}
+                              >
+                                {offer.status === 'pending'
+                                  ? 'PENDING DECISION'
+                                  : offer.status === 'accepted'
+                                  ? 'ACCEPTED 🎉'
+                                  : offer.status === 'declined'
+                                  ? 'DECLINED ✕'
+                                  : offer.status.toUpperCase()}
+                              </span>
+                            </div>
+
+                            {/* Terms */}
+                            <div className="bg-[#F4F6FB] p-2 rounded-lg border border-[#08123B]/10 space-y-1 mb-2 font-mono-code text-[11px]">
+                              <div className="flex justify-between">
+                                <span className="text-[#7382A6]">Terms Offered:</span>
+                                <span className="font-bold text-[#0052FF]">
+                                  {offer.equity} • {offer.comp}
+                                </span>
+                              </div>
+                              {offer.note && (
+                                <p className="text-[11px] text-[#4A5578] italic pt-1 border-t border-[#08123B]/10">
+                                  "{offer.note}"
+                                </p>
+                              )}
+                            </div>
+
+                            {/* Status Context & Action */}
+                            <div className="flex items-center justify-between gap-2 pt-1 font-mono-code text-xs">
+                              {offer.status === 'pending' ? (
+                                <>
+                                  <span className="text-[10px] text-[#7382A6] flex items-center gap-1">
+                                    <span className="h-1.5 w-1.5 rounded-full bg-[#FFC700] animate-ping" />
+                                    Sent & waiting for response...
+                                  </span>
+                                  <button
+                                    onClick={() => handleWithdrawOffer(offer.id)}
+                                    disabled={processingId === offer.id}
+                                    className="px-2.5 py-1 rounded border border-[#08123B] text-[10px] font-bold text-[#FF007A] hover:bg-[#FFF0F5]"
+                                  >
+                                    WITHDRAW
+                                  </button>
+                                </>
+                              ) : offer.status === 'accepted' ? (
+                                <div className="w-full flex items-center justify-between">
+                                  <span className="text-[#008A3E] font-bold text-[11px]">
+                                    ✓ Candidate accepted and joined your team!
+                                  </span>
+                                  <button
+                                    onClick={() => {
+                                      setIsOpen(false);
+                                      if (offer.candidateId) onViewProfile(offer.candidateId);
+                                    }}
+                                    className="px-2 py-0.5 rounded bg-[#08123B] text-white text-[10px] font-bold"
+                                  >
+                                    PROFILE
+                                  </button>
+                                </div>
+                              ) : offer.status === 'declined' ? (
+                                <div className="w-full flex items-center justify-between">
+                                  <span className="text-[#FF007A] font-bold text-[11px]">
+                                    Candidate declined this offer.
+                                  </span>
+                                  <button
+                                    onClick={() => {
+                                      setIsOpen(false);
+                                      if (offer.candidateId) onViewProfile(offer.candidateId);
+                                    }}
+                                    className="px-2 py-0.5 rounded bg-[#0052FF] text-white text-[10px] font-bold"
+                                  >
+                                    RE-OFFER
+                                  </button>
+                                </div>
+                              ) : (
+                                <span className="text-[10px] text-[#7382A6]">Offer was withdrawn.</span>
+                              )}
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
                   )}
                 </div>
               )}
@@ -366,7 +585,10 @@ export function NotificationBubble({
                       >
                         <div className="flex items-center gap-2.5">
                           <img
-                            src={req.senderAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(req.senderName)}`}
+                            src={
+                              req.senderAvatar ||
+                              `https://ui-avatars.com/api/?name=${encodeURIComponent(req.senderName)}`
+                            }
                             alt={req.senderName}
                             className="h-10 w-10 rounded-lg border border-[#08123B] object-cover"
                           />
@@ -428,13 +650,19 @@ export function NotificationBubble({
                     data.alerts.map((alert) => (
                       <div
                         key={alert.id}
-                        className="p-3 rounded-lg border border-[#08123B]/20 bg-[#F4F6FB] space-y-1 font-mono-code"
+                        className={`p-3 rounded-lg border-2 space-y-1 font-mono-code ${
+                          alert.type === 'offer_accepted'
+                            ? 'border-[#008A3E] bg-[#EBF7EE] text-[#008A3E]'
+                            : alert.type === 'offer_declined'
+                            ? 'border-[#FF007A] bg-[#FFF0F5] text-[#FF007A]'
+                            : 'border-[#08123B]/20 bg-[#F4F6FB] text-[#08123B]'
+                        }`}
                       >
                         <div className="flex items-center justify-between">
-                          <span className="font-bold text-xs text-[#08123B]">
+                          <span className="font-bold text-xs">
                             {alert.title}
                           </span>
-                          <span className="text-[10px] text-[#7382A6]">Just now</span>
+                          <span className="text-[10px] text-[#7382A6]">Recent</span>
                         </div>
                         <p className="text-xs text-[#4A5578] leading-relaxed">
                           {alert.message}

@@ -157,16 +157,28 @@ apiRouter.post('/seed', async (req, res) => {
 
 /**
  * GET /api/people
- * Search people by name, skill, or title (PRD Section 7)
+ * Search people by name, multi-skills, or company/title (PRD Section 7)
  */
 apiRouter.get('/people', async (req, res) => {
   try {
-    const { q, skill, company, limit = '24' } = req.query;
-    const limitNum = Math.min(100, Math.max(1, parseInt(String(limit), 10) || 24));
+    const { q, skill, skills, skillMode = 'any', company, limit = '48' } = req.query;
+    const limitNum = Math.min(100, Math.max(1, parseInt(String(limit), 10) || 48));
+
+    // Handle multiple skills (comma-separated or single)
+    let skillList = [];
+    if (skills) {
+      skillList = String(skills)
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean);
+    } else if (skill) {
+      skillList = [String(skill).trim()];
+    }
 
     const rawRecords = await executeReadQuery(SEARCH_PEOPLE_QUERY, {
       q: q ? String(q).trim() : null,
-      skill: skill ? String(skill).trim() : null,
+      skills: skillList.length > 0 ? skillList : null,
+      skillMode: skillMode === 'all' ? 'all' : 'any',
       company: company ? String(company).trim() : null,
       limit: limitNum,
     });
@@ -700,6 +712,24 @@ apiRouter.post('/offers/:offerId/respond', async (req, res) => {
     return res.json(result);
   } catch (err) {
     console.error('Error responding to offer:', err);
+    return res.status(400).json({ success: false, error: err.message });
+  }
+});
+
+/**
+ * POST /api/offers/:offerId/withdraw
+ * Recruiter cancels a pending sent offer
+ */
+apiRouter.post('/offers/:offerId/withdraw', async (req, res) => {
+  try {
+    const { offerId } = req.params;
+    const authHeader = req.headers.authorization || '';
+    const token = authHeader.replace(/^Bearer\s+/i, '');
+    const user = getUserByToken(token);
+
+    const result = await withdrawTeamOffer({ offerId, user });
+    return res.json(result);
+  } catch (err) {
     return res.status(400).json({ success: false, error: err.message });
   }
 });

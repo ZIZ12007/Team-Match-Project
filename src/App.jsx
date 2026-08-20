@@ -13,6 +13,7 @@ import { HowToUseModal } from './components/HowToUseModal';
 import { OnboardingTourModal } from './components/OnboardingTourModal';
 import { AuthModal } from './components/AuthModal';
 import { NotificationBubble } from './components/NotificationBubble';
+import { SkillMultiSelect, PopularSkillsPills } from './components/SkillMultiSelect';
 import { api, ApiError } from './api/client';
 import {
   Search,
@@ -64,7 +65,8 @@ export default function App() {
 
   // Search & Talent Directory state
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedSkillFilter, setSelectedSkillFilter] = useState('');
+  const [selectedSkills, setSelectedSkills] = useState([]); // array of selected skill names
+  const [skillMatchMode, setSkillMatchMode] = useState('any'); // 'any' | 'all'
   const [selectedCompanyFilter, setSelectedCompanyFilter] = useState('');
   const [allSkills, setAllSkills] = useState([]);
   const [allCompanies, setAllCompanies] = useState([]);
@@ -72,6 +74,35 @@ export default function App() {
   const [allDirectoryPeople, setAllDirectoryPeople] = useState([]);
   const [loadingPeople, setLoadingPeople] = useState(true);
   const [searchError, setSearchError] = useState(null);
+
+  // Compute top popular skills for quick 1-click pill filter bar
+  const popularSkills = useMemo(() => {
+    if (allSkills.length === 0) {
+      return [
+        'React & Next.js',
+        'LLM Fine-tuning',
+        'PyTorch',
+        'Cypher & Graph DBs',
+        'Rust',
+        'TypeScript & JavaScript',
+        'Distributed Systems',
+        'Go / Golang',
+        'RAG Architecture',
+        'Knowledge Graphs',
+      ];
+    }
+    return [...allSkills]
+      .sort((a, b) => (b.personCount || 0) - (a.personCount || 0))
+      .slice(0, 10)
+      .map((s) => s.name);
+  }, [allSkills]);
+
+  // Toggle single skill from popular pills or chips
+  const handleToggleSkill = (skillName) => {
+    setSelectedSkills((prev) =>
+      prev.includes(skillName) ? prev.filter((s) => s !== skillName) : [...prev, skillName]
+    );
+  };
 
   // Person Modal state
   const [selectedPersonId, setSelectedPersonId] = useState(null);
@@ -148,7 +179,8 @@ export default function App() {
     try {
       const res = await api.searchPeople({
         q: searchQuery,
-        skill: selectedSkillFilter,
+        skills: selectedSkills,
+        skillMode: skillMatchMode,
         company: selectedCompanyFilter,
         limit: 48,
       });
@@ -164,7 +196,7 @@ export default function App() {
       setPeople(uniquePeople);
 
       // Save initial comprehensive directory when no filters are active
-      if (!searchQuery && !selectedSkillFilter && !selectedCompanyFilter && uniquePeople.length > 0) {
+      if (!searchQuery && selectedSkills.length === 0 && !selectedCompanyFilter && uniquePeople.length > 0) {
         setAllDirectoryPeople(uniquePeople);
       }
 
@@ -183,7 +215,7 @@ export default function App() {
     } finally {
       setLoadingPeople(false);
     }
-  }, [searchQuery, selectedSkillFilter, selectedCompanyFilter]);
+  }, [searchQuery, selectedSkills, skillMatchMode, selectedCompanyFilter]);
 
   // Initial load
   useEffect(() => {
@@ -437,13 +469,13 @@ export default function App() {
               <div className="brutal-card p-4 bg-white space-y-3 shadow-[4px_4px_0px_#08123B]">
                 <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
                   {/* Search Text Input */}
-                  <div className="sm:col-span-6 relative">
+                  <div className="sm:col-span-5 relative">
                     <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#7382A6]" />
                     <input
                       type="text"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      placeholder="Search by name, role, bio keywords, or location..."
+                      placeholder="Search by name, role, bio, location..."
                       className="w-full pl-10 pr-4 py-2.5 rounded-lg border-2 border-[#08123B] bg-[#F4F6FB] font-mono-code text-xs font-semibold focus:outline-none shadow-[2px_2px_0px_#08123B]"
                     />
                     {searchQuery && (
@@ -456,20 +488,15 @@ export default function App() {
                     )}
                   </div>
 
-                  {/* Skill Filter Dropdown */}
-                  <div className="sm:col-span-3">
-                    <select
-                      value={selectedSkillFilter}
-                      onChange={(e) => setSelectedSkillFilter(e.target.value)}
-                      className="w-full py-2.5 px-3 rounded-lg border-2 border-[#08123B] bg-[#F4F6FB] font-mono-code text-xs font-semibold focus:outline-none shadow-[2px_2px_0px_#08123B]"
-                    >
-                      <option value="">All Skills ({allSkills.length})</option>
-                      {allSkills.map((s) => (
-                        <option key={s.id || s.name} value={s.name}>
-                          {s.name} ({s.personCount || 0})
-                        </option>
-                      ))}
-                    </select>
+                  {/* Multi-Skill Filter Dropdown & Combobox */}
+                  <div className="sm:col-span-4">
+                    <SkillMultiSelect
+                      allSkills={allSkills}
+                      selectedSkills={selectedSkills}
+                      onChangeSelectedSkills={setSelectedSkills}
+                      matchMode={skillMatchMode}
+                      onChangeMatchMode={setSkillMatchMode}
+                    />
                   </div>
 
                   {/* Company Filter Dropdown */}
@@ -489,29 +516,86 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* Active Filter Chips */}
-                {(selectedSkillFilter || selectedCompanyFilter || searchQuery) && (
+                {/* Popular In-Demand Skills Quick Filter Pills */}
+                <div className="pt-2 border-t border-[#08123B]/10">
+                  <PopularSkillsPills
+                    popularSkills={popularSkills}
+                    selectedSkills={selectedSkills}
+                    onToggleSkill={handleToggleSkill}
+                  />
+                </div>
+
+                {/* Active Filter Chips with Multi-Skill Support */}
+                {(selectedSkills.length > 0 || selectedCompanyFilter || searchQuery) && (
                   <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-[#08123B]/15">
                     <span className="font-mono-code text-[11px] text-[#7382A6] uppercase font-bold">
-                      ACTIVE FILTERS:
+                      ACTIVE FILTERS ({selectedSkills.length + (selectedCompanyFilter ? 1 : 0) + (searchQuery ? 1 : 0)}):
                     </span>
+
+                    {/* Match Mode Pill if >=2 skills */}
+                    {selectedSkills.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setSkillMatchMode((prev) => (prev === 'any' ? 'all' : 'any'))
+                        }
+                        className={`inline-flex items-center gap-1.5 rounded-md border-2 border-[#08123B] px-2 py-0.5 text-xs font-mono-code font-bold uppercase transition-all shadow-[1.5px_1.5px_0px_#08123B] ${
+                          skillMatchMode === 'all'
+                            ? 'bg-[#FF007A] text-white'
+                            : 'bg-[#FFC700] text-[#08123B]'
+                        }`}
+                        title="Click to toggle between ANY (OR) and ALL (AND) matching"
+                      >
+                        <SlidersHorizontal className="h-3 w-3" />
+                        <span>MATCH: {skillMatchMode.toUpperCase()} ({skillMatchMode === 'all' ? 'AND' : 'OR'})</span>
+                      </button>
+                    )}
+
                     {searchQuery && (
-                      <span className="inline-flex items-center gap-1 rounded-md border border-[#08123B] bg-[#F4F6FB] px-2 py-0.5 text-xs font-mono-code font-bold text-[#08123B]">
+                      <span className="inline-flex items-center gap-1 rounded-md border-2 border-[#08123B] bg-[#F4F6FB] px-2 py-0.5 text-xs font-mono-code font-bold text-[#08123B] shadow-[1.5px_1.5px_0px_#08123B]">
                         Query: "{searchQuery}"
                         <button onClick={() => setSearchQuery('')}><X className="h-3 w-3 text-[#FF007A]" /></button>
                       </span>
                     )}
-                    {selectedSkillFilter && (
-                      <span className="inline-flex items-center gap-1 rounded-md border border-[#08123B] bg-[#0052FF] text-white px-2 py-0.5 text-xs font-mono-code font-bold">
-                        Skill: {selectedSkillFilter}
-                        <button onClick={() => setSelectedSkillFilter('')}><X className="h-3 w-3" /></button>
+
+                    {/* Render Each Selected Skill Chip */}
+                    {selectedSkills.map((skillName) => (
+                      <span
+                        key={skillName}
+                        className="inline-flex items-center gap-1 rounded-md border-2 border-[#08123B] bg-[#0052FF] text-white px-2 py-0.5 text-xs font-mono-code font-bold shadow-[1.5px_1.5px_0px_#08123B]"
+                      >
+                        <span>{skillName}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleToggleSkill(skillName)}
+                          className="hover:text-[#FFC700] transition-colors ml-0.5"
+                          title={`Remove ${skillName}`}
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </span>
+                    ))}
+
+                    {selectedCompanyFilter && (
+                      <span className="inline-flex items-center gap-1 rounded-md border-2 border-[#08123B] bg-[#08123B] text-white px-2 py-0.5 text-xs font-mono-code font-bold shadow-[1.5px_1.5px_0px_#08123B]">
+                        Company: {selectedCompanyFilter}
+                        <button onClick={() => setSelectedCompanyFilter('')}><X className="h-3 w-3 text-[#FF007A]" /></button>
                       </span>
                     )}
-                    {selectedCompanyFilter && (
-                      <span className="inline-flex items-center gap-1 rounded-md border border-[#08123B] bg-[#08123B] text-white px-2 py-0.5 text-xs font-mono-code font-bold">
-                        Company: {selectedCompanyFilter}
-                        <button onClick={() => setSelectedCompanyFilter('')}><X className="h-3 w-3" /></button>
-                      </span>
+
+                    {/* Reset All Button */}
+                    {(selectedSkills.length > 1 || (selectedSkills.length > 0 && selectedCompanyFilter)) && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedSkills([]);
+                          setSelectedCompanyFilter('');
+                          setSearchQuery('');
+                        }}
+                        className="text-xs font-mono-code font-bold text-[#FF007A] hover:underline ml-2 uppercase"
+                      >
+                        [RESET ALL]
+                      </button>
                     )}
                   </div>
                 )}
@@ -569,6 +653,7 @@ export default function App() {
                         person={person}
                         index={idx}
                         currentUserId={currentUser?.id}
+                        selectedSkills={selectedSkills}
                         onViewProfile={handleViewProfile}
                         onExploreGraph={handleExploreGraph}
                         onFindPath={handleFindPath}
@@ -735,13 +820,21 @@ export default function App() {
 
       {/* Footer */}
       <footer className="border-t-2 border-[#08123B] bg-[#FFFFFF] py-6 px-4">
-        <div className="mx-auto max-w-7xl flex flex-col sm:flex-row items-center justify-between gap-4 font-mono-code text-xs text-[#4A5578]">
-          <div className="flex items-center gap-2">
+        <div className="mx-auto max-w-7xl flex flex-col md:flex-row items-center justify-between gap-4 font-mono-code text-xs text-[#4A5578]">
+          <div className="flex flex-col sm:flex-row items-center gap-2 text-center sm:text-left">
             <span className="font-display font-extrabold text-[#08123B]">STARTUP GRAPH</span>
-            <span>// TALENT & TEAM MATCHING ENGINE</span>
+            <span className="hidden sm:inline">//</span>
+            <span>© {new Date().getFullYear()} <strong className="text-[#08123B]">George Giovanni Zikoranibuchukwu</strong></span>
+            <span className="hidden sm:inline">•</span>
+            <a
+              href="mailto:georgezikora2@gmail.com"
+              className="text-[#0052FF] font-bold hover:underline"
+            >
+              georgezikora2@gmail.com
+            </a>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center justify-center gap-4">
             <button
               onClick={() => setIsGuideOpen(true)}
               className="text-[#0052FF] font-bold hover:underline flex items-center gap-1 uppercase"
@@ -757,7 +850,7 @@ export default function App() {
             >
               System Specs (PDF)
             </a>
-            <span>COGNO_DB BOLT SECURE</span>
+            <span className="text-[#08123B] font-bold">COGNO_DB BOLT SECURE</span>
           </div>
         </div>
       </footer>

@@ -2,7 +2,7 @@
  * Parameterized Cypher queries for People searches and Profile views
  */
 
-// Search people with filters (keyword, skill, company, title)
+// Search people with filters (keyword, multi-skills, company, title)
 export const SEARCH_PEOPLE_QUERY = `
 MATCH (p:Person)
 WHERE ($q IS NULL OR $q = '' OR 
@@ -10,8 +10,18 @@ WHERE ($q IS NULL OR $q = '' OR
        toLower(p.title) CONTAINS toLower($q) OR 
        toLower(p.bio) CONTAINS toLower($q) OR 
        toLower(p.location) CONTAINS toLower($q))
-  AND ($skill IS NULL OR $skill = '' OR ($skill IS NOT NULL AND size([(p)-[:HAS_SKILL]->(sk:Skill) WHERE sk.name = $skill | 1]) > 0))
   AND ($company IS NULL OR $company = '' OR ($company IS NOT NULL AND size([(p)-[:WORKS_AT]->(co:Company) WHERE co.name = $company | 1]) > 0))
+  AND (
+    $skills IS NULL OR size($skills) = 0 OR
+    (
+      $skillMode = 'all' AND
+      size([skName IN $skills WHERE size([(p)-[:HAS_SKILL]->(sk:Skill) WHERE sk.name = skName | 1]) > 0 | 1]) = size($skills)
+    ) OR
+    (
+      ($skillMode IS NULL OR $skillMode <> 'all') AND
+      size([(p)-[:HAS_SKILL]->(sk:Skill) WHERE sk.name IN $skills | 1]) > 0
+    )
+  )
 
 WITH DISTINCT p
 
@@ -33,9 +43,10 @@ WITH p, companies[0] AS primaryCompany, collect(DISTINCT {
   years: hs.years
 }) AS skills
 
-// Direct connections count
+// Direct connections count & matching skills count
 OPTIONAL MATCH (p)-[:KNOWS]-(conn:Person)
-WITH p, primaryCompany, skills, count(DISTINCT conn) AS connectionCount
+WITH p, primaryCompany, skills, count(DISTINCT conn) AS connectionCount,
+     size([sk IN skills WHERE $skills IS NOT NULL AND sk.name IN $skills | 1]) AS matchedSkillsCount
 
 RETURN p.id AS id,
        p.name AS name,
@@ -49,8 +60,9 @@ RETURN p.id AS id,
        primaryCompany.industry AS companyIndustry,
        primaryCompany.role AS companyRole,
        skills,
-       connectionCount
-ORDER BY connectionCount DESC, p.name ASC
+       connectionCount,
+       matchedSkillsCount
+ORDER BY matchedSkillsCount DESC, connectionCount DESC, p.name ASC
 LIMIT $limit
 `;
 

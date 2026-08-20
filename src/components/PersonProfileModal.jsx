@@ -34,6 +34,7 @@ export function PersonProfileModal({ personId, onClose, onExploreGraph, onFindPa
 
   // Offer modal & connection request state
   const [isOfferModalOpen, setIsOfferModalOpen] = useState(false);
+  const [offerSentStatus, setOfferSentStatus] = useState(null);
   const [connectStatus, setConnectStatus] = useState(null);
   const [connecting, setConnecting] = useState(false);
 
@@ -202,10 +203,12 @@ export function PersonProfileModal({ personId, onClose, onExploreGraph, onFindPa
                     whileHover={{ scale: 1.03 }}
                     whileTap={{ scale: 0.96 }}
                     onClick={() => setIsOfferModalOpen(true)}
-                    className="brutal-btn bg-[#FF007A] text-white px-3.5 py-2 text-xs font-display font-extrabold uppercase flex items-center justify-center gap-1.5 hover:bg-[#E6006E] shadow-[2px_2px_0px_#08123B]"
+                    className={`brutal-btn text-white px-3.5 py-2 text-xs font-display font-extrabold uppercase flex items-center justify-center gap-1.5 shadow-[2px_2px_0px_#08123B] ${
+                      offerSentStatus ? 'bg-[#008A3E] hover:bg-[#007032]' : 'bg-[#FF007A] hover:bg-[#E6006E]'
+                    }`}
                   >
-                    <Send className="h-4 w-4" />
-                    <span>EXTEND OFFER</span>
+                    {offerSentStatus ? <Check className="h-4 w-4" /> : <Send className="h-4 w-4" />}
+                    <span>{offerSentStatus ? 'OFFER SENT ✓' : 'EXTEND OFFER'}</span>
                   </motion.button>
                   <motion.button
                     whileHover={{ scale: 1.03 }}
@@ -602,6 +605,9 @@ export function PersonProfileModal({ personId, onClose, onExploreGraph, onFindPa
           onClose={() => setIsOfferModalOpen(false)}
           candidate={profile}
           currentUser={currentUser}
+          onOfferSent={(offer) => {
+            setOfferSentStatus(offer?.status || 'sent');
+          }}
         />
       )}
     </div>

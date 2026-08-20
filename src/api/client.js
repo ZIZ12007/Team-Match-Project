@@ -51,7 +51,12 @@ export const api = {
   searchPeople: (params = {}) => {
     const query = new URLSearchParams();
     if (params.q) query.set('q', params.q);
-    if (params.skill) query.set('skill', params.skill);
+    if (params.skills && Array.isArray(params.skills) && params.skills.length > 0) {
+      query.set('skills', params.skills.join(','));
+    } else if (params.skill) {
+      query.set('skill', params.skill);
+    }
+    if (params.skillMode) query.set('skillMode', params.skillMode);
     if (params.company) query.set('company', params.company);
     if (params.limit) query.set('limit', String(params.limit));
     return fetchJson(`/api/people?${query.toString()}`);
@@ -153,6 +158,12 @@ export const api = {
       method: 'POST',
       headers: token ? { Authorization: `Bearer ${token}` } : {},
       body: JSON.stringify({ status }),
+    }),
+
+  withdrawOffer: (offerId, token) =>
+    fetchJson(`/api/offers/${encodeURIComponent(offerId)}/withdraw`, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
     }),
 
   sendConnectionRequest: (payload, token) =>

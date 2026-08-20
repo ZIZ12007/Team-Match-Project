@@ -5,6 +5,7 @@ import {
   Sparkles,
   Sliders,
   CheckCircle2,
+  XCircle,
   GitMerge,
   Shield,
   Loader2,
@@ -17,6 +18,7 @@ import {
   Briefcase,
   Trash2,
   BookmarkPlus,
+  Search,
 } from 'lucide-react';
 import { api } from '../api/client';
 import { SendOfferModal } from './SendOfferModal';
@@ -79,10 +81,34 @@ export function TeamMatcher({
 
   const [isAddingCustomRole, setIsAddingCustomRole] = useState(false);
   const [customRoleTitle, setCustomRoleTitle] = useState('');
+  const [skillSearchQuery, setSkillSearchQuery] = useState('');
 
   // Offer modal state
   const [selectedCandidateForOffer, setSelectedCandidateForOffer] = useState(null);
   const [activeOffers, setActiveOffers] = useState({}); // { [candidateId]: offerObj }
+
+  // Sync live outgoing offers from server notifications
+  const fetchLiveOffers = async () => {
+    try {
+      const token = localStorage.getItem('startup_graph_token') || '';
+      const res = await api.getNotifications(token, currentUser?.id);
+      if (res?.outgoingOffers) {
+        const map = {};
+        res.outgoingOffers.forEach((o) => {
+          map[o.candidateId] = o;
+        });
+        setActiveOffers(map);
+      }
+    } catch (err) {
+      console.warn('Could not sync outgoing offers in TeamMatcher:', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchLiveOffers();
+    const interval = setInterval(fetchLiveOffers, 4000);
+    return () => clearInterval(interval);
+  }, [currentUser]);
 
   // Persist custom roles
   useEffect(() => {
@@ -432,33 +458,61 @@ export function TeamMatcher({
 
           {/* Available Skills Grid */}
           <div className="space-y-2">
-            <p className="font-mono-code text-xs font-bold uppercase text-[#08123B]">
-              Graph Skill Library:
-            </p>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-56 overflow-y-auto pr-1">
-              {allSkills.map((s) => {
-                const isSelected = selectedSkills.includes(s.name);
-                return (
-                  <motion.button
-                    key={s.id || s.name}
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.96 }}
-                    onClick={() => toggleSkill(s.name)}
-                    className={`p-2 rounded-lg border text-left text-xs font-mono-code transition-all flex items-center justify-between ${
-                      isSelected
-                        ? 'border-2 border-[#08123B] bg-[#08123B] text-white font-bold shadow-[2px_2px_0px_#0052FF]'
-                        : 'border-[#08123B]/30 bg-white text-[#08123B] hover:border-[#08123B] hover:bg-[#F4F6FB]'
-                    }`}
+            <div className="flex items-center justify-between gap-2">
+              <p className="font-mono-code text-xs font-bold uppercase text-[#08123B]">
+                Graph Skill Library:
+              </p>
+              <div className="relative w-48">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-[#7382A6]" />
+                <input
+                  type="text"
+                  value={skillSearchQuery}
+                  onChange={(e) => setSkillSearchQuery(e.target.value)}
+                  placeholder="Filter skills..."
+                  className="w-full pl-7 pr-6 py-1 rounded-md border border-[#08123B]/30 bg-[#F4F6FB] font-mono-code text-[11px] focus:outline-none focus:border-[#0052FF]"
+                />
+                {skillSearchQuery && (
+                  <button
+                    onClick={() => setSkillSearchQuery('')}
+                    className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[10px] text-[#7382A6] hover:text-[#08123B]"
                   >
-                    <span className="truncate">{s.name}</span>
-                    {isSelected ? (
-                      <CheckCircle2 className="h-3.5 w-3.5 text-[#00D26A] shrink-0" />
-                    ) : (
-                      <Plus className="h-3.5 w-3.5 text-[#7382A6] shrink-0" />
-                    )}
-                  </motion.button>
-                );
-              })}
+                    <X className="h-3 w-3" />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-56 overflow-y-auto pr-1">
+              {allSkills
+                .filter(
+                  (s) =>
+                    !skillSearchQuery.trim() ||
+                    s.name.toLowerCase().includes(skillSearchQuery.toLowerCase().trim()) ||
+                    (s.category && s.category.toLowerCase().includes(skillSearchQuery.toLowerCase().trim()))
+                )
+                .map((s) => {
+                  const isSelected = selectedSkills.includes(s.name);
+                  return (
+                    <motion.button
+                      key={s.id || s.name}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.96 }}
+                      onClick={() => toggleSkill(s.name)}
+                      className={`p-2 rounded-lg border text-left text-xs font-mono-code transition-all flex items-center justify-between ${
+                        isSelected
+                          ? 'border-2 border-[#08123B] bg-[#08123B] text-white font-bold shadow-[2px_2px_0px_#0052FF]'
+                          : 'border-[#08123B]/30 bg-white text-[#08123B] hover:border-[#08123B] hover:bg-[#F4F6FB]'
+                      }`}
+                    >
+                      <span className="truncate">{s.name}</span>
+                      {isSelected ? (
+                        <CheckCircle2 className="h-3.5 w-3.5 text-[#00D26A] shrink-0" />
+                      ) : (
+                        <Plus className="h-3.5 w-3.5 text-[#7382A6] shrink-0" />
+                      )}
+                    </motion.button>
+                  );
+                })}
             </div>
           </div>
         </motion.div>
@@ -593,9 +647,43 @@ export function TeamMatcher({
 
                     {/* Sent Offer Status Badge if extended */}
                     {sentOffer && (
-                      <div className="mb-3 p-2 bg-[#EBF7EE] border border-[#008A3E] rounded-lg font-mono-code text-xs font-bold text-[#008A3E] flex items-center gap-1.5">
-                        <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
-                        <span>Team offer extended ({sentOffer.roleName})</span>
+                      <div className="mb-3">
+                        {sentOffer.status === 'accepted' ? (
+                          <div className="p-2 bg-[#EBF7EE] border-2 border-[#008A3E] rounded-lg font-mono-code text-xs font-bold text-[#008A3E] flex items-center justify-between shadow-[2px_2px_0px_#008A3E]">
+                            <span className="flex items-center gap-1.5">
+                              <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-[#008A3E]" />
+                              <span>Offer Accepted! On Team Roster</span>
+                            </span>
+                            <span className="text-[10px] bg-[#008A3E] text-white px-1.5 py-0.2 rounded font-mono-code font-bold">
+                              ACCEPTED 🎉
+                            </span>
+                          </div>
+                        ) : sentOffer.status === 'declined' ? (
+                          <div className="p-2 bg-[#FFF0F5] border-2 border-[#FF007A] rounded-lg font-mono-code text-xs font-bold text-[#FF007A] flex items-center justify-between">
+                            <span className="flex items-center gap-1.5">
+                              <XCircle className="h-3.5 w-3.5 shrink-0 text-[#FF007A]" />
+                              <span>Offer was declined</span>
+                            </span>
+                            <span className="text-[10px] bg-[#FF007A] text-white px-1.5 py-0.2 rounded font-mono-code font-bold">
+                              DECLINED ✕
+                            </span>
+                          </div>
+                        ) : sentOffer.status === 'withdrawn' ? (
+                          <div className="p-2 bg-zinc-100 border border-zinc-300 rounded-lg font-mono-code text-xs font-bold text-zinc-600 flex items-center justify-between">
+                            <span>Offer was withdrawn</span>
+                            <span className="text-[10px] bg-zinc-200 px-1.5 py-0.2 rounded">WITHDRAWN</span>
+                          </div>
+                        ) : (
+                          <div className="p-2 bg-[#FFFBEB] border-2 border-[#FFC700] rounded-lg font-mono-code text-xs font-bold text-[#92400E] flex items-center justify-between">
+                            <span className="flex items-center gap-1.5">
+                              <span className="h-2 w-2 rounded-full bg-[#FFC700] animate-ping" />
+                              <span>Offer sent: waiting for response</span>
+                            </span>
+                            <span className="text-[10px] bg-[#FFC700] text-[#08123B] px-1.5 py-0.2 rounded font-mono-code font-bold border border-[#08123B]">
+                              PENDING
+                            </span>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -607,10 +695,24 @@ export function TeamMatcher({
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.96 }}
                       onClick={() => setSelectedCandidateForOffer(cand)}
-                      className="w-full brutal-btn bg-[#FF007A] text-white py-2 text-xs font-display font-extrabold uppercase hover:bg-[#E6006E] flex items-center justify-center gap-1.5 shadow-[3px_3px_0px_#08123B]"
+                      className={`w-full brutal-btn py-2 text-xs font-display font-extrabold uppercase flex items-center justify-center gap-1.5 shadow-[3px_3px_0px_#08123B] ${
+                        sentOffer?.status === 'accepted'
+                          ? 'bg-[#008A3E] text-white hover:bg-[#007032]'
+                          : sentOffer?.status === 'declined'
+                          ? 'bg-[#0052FF] text-white hover:bg-[#0042D9]'
+                          : 'bg-[#FF007A] text-white hover:bg-[#E6006E]'
+                      }`}
                     >
                       <Send className="h-3.5 w-3.5" />
-                      <span>{sentOffer ? 'RE-SEND / UPDATE OFFER' : 'EXTEND TEAM OFFER'}</span>
+                      <span>
+                        {sentOffer?.status === 'accepted'
+                          ? 'MANAGE / UPDATE TEAM OFFER'
+                          : sentOffer?.status === 'declined'
+                          ? 'SEND REVISED OFFER'
+                          : sentOffer?.status === 'pending'
+                          ? 'UPDATE PENDING OFFER'
+                          : 'EXTEND TEAM OFFER'}
+                      </span>
                     </motion.button>
 
                     <div className="flex items-center gap-2">

@@ -2,10 +2,25 @@ import React from 'react';
 import { motion } from 'motion/react';
 import { MapPin, Building2, GitMerge, Network, ArrowUpRight } from 'lucide-react';
 
-export function PersonCard({ person, onViewProfile, onExploreGraph, onFindPath, index = 0, currentUserId }) {
-  const skills = person.skills || [];
+export function PersonCard({
+  person,
+  onViewProfile,
+  onExploreGraph,
+  onFindPath,
+  index = 0,
+  currentUserId,
+  selectedSkills = [],
+}) {
+  const rawSkills = person.skills || [];
   const connectionCount = person.connectionCount || 0;
   const isMe = person.isCurrentUser || (currentUserId && person.id === currentUserId);
+
+  // Sort skills so matching skills appear first
+  const skills = [...rawSkills].sort((a, b) => {
+    const aMatch = selectedSkills.includes(a.name) ? 1 : 0;
+    const bMatch = selectedSkills.includes(b.name) ? 1 : 0;
+    return bMatch - aMatch;
+  });
 
   return (
     <motion.div
@@ -93,21 +108,33 @@ export function PersonCard({ person, onViewProfile, onExploreGraph, onFindPath, 
 
         {/* Skills Tag Cloud with Micro Hover bounce */}
         <div className="mb-4 flex flex-wrap gap-1.5">
-          {skills.slice(0, 4).map((skill, idx) => (
-            <motion.span
-              key={idx}
-              whileHover={{ scale: 1.05, y: -1 }}
-              transition={{ type: 'spring', stiffness: 500, damping: 25 }}
-              className="rounded-md border border-[#08123B] bg-[#F4F6FB] px-2 py-0.5 text-[11px] font-mono-code font-semibold text-[#08123B] cursor-default"
-            >
-              {skill.name}
-              {skill.level && (
-                <span className="ml-1 text-[10px] font-bold text-[#0052FF]">
-                  L{skill.level}
-                </span>
-              )}
-            </motion.span>
-          ))}
+          {skills.slice(0, 4).map((skill, idx) => {
+            const isMatch = selectedSkills.includes(skill.name);
+            return (
+              <motion.span
+                key={idx}
+                whileHover={{ scale: 1.05, y: -1 }}
+                transition={{ type: 'spring', stiffness: 500, damping: 25 }}
+                className={`rounded-md border px-2 py-0.5 text-[11px] font-mono-code font-semibold cursor-default transition-colors ${
+                  isMatch
+                    ? 'border-[#08123B] bg-[#0052FF] text-white font-bold shadow-[1.5px_1.5px_0px_#08123B]'
+                    : 'border-[#08123B] bg-[#F4F6FB] text-[#08123B]'
+                }`}
+              >
+                {isMatch && <span className="mr-1 text-[#FFC700] font-bold">✓</span>}
+                {skill.name}
+                {skill.level && (
+                  <span
+                    className={`ml-1 text-[10px] font-bold ${
+                      isMatch ? 'text-white/80' : 'text-[#0052FF]'
+                    }`}
+                  >
+                    L{skill.level}
+                  </span>
+                )}
+              </motion.span>
+            );
+          })}
           {skills.length > 4 && (
             <span className="rounded-md border border-dashed border-[#7382A6] bg-[#FFFFFF] px-1.5 py-0.5 text-[10px] font-mono-code font-medium text-[#4A5578]">
               +{skills.length - 4}
