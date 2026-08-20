@@ -11,6 +11,23 @@ import { TEAM_MATCH_QUERY } from './queries/matchQueries.js';
 import { GET_ALL_SKILLS_QUERY, GET_SKILL_EXPERTS_QUERY } from './queries/skillQueries.js';
 import { CYPHER_SHOWCASE_QUERIES } from './queries/cypherShowcase.js';
 import { seedDatabase } from './seed.js';
+import {
+  initiateRegistration,
+  completeVerification,
+  resendVerificationCode,
+  authenticateUser,
+  getUserByToken,
+  removeSession,
+  DEMO_ACCOUNTS,
+} from './auth.js';
+import {
+  getNotifications,
+  sendTeamOffer,
+  respondToTeamOffer,
+  sendConnectionRequest,
+  respondToConnectionRequest,
+  markAlertsRead,
+} from './notifications.js';
 
 export const apiRouter = Router();
 
@@ -452,4 +469,283 @@ apiRouter.get('/docs/pdf', (req, res) => {
   res.setHeader('Content-Disposition', 'inline; filename="Startup_Graph_Documentation.pdf"');
   res.sendFile(filePath);
 });
+
+// ==========================================
+// AUTHENTICATION & USER REGISTRATION ROUTES
+// ==========================================
+
+/**
+ * GET /api/auth/demo-accounts
+ */
+apiRouter.get('/auth/demo-accounts', (req, res) => {
+  return res.json({ success: true, accounts: DEMO_ACCOUNTS });
+});
+
+/**
+ * POST /api/auth/register
+ * Step 1: Submit profile details, generates email verification code
+ */
+apiRouter.post('/auth/register', async (req, res) => {
+  try {
+    const result = await initiateRegistration(req.body);
+    return res.json(result);
+  } catch (err) {
+    console.error('Registration error:', err);
+    return res.status(400).json({
+      success: false,
+      error: 'registration_failed',
+      message: err.message || 'Failed to initiate registration.',
+    });
+  }
+});
+
+/**
+ * POST /api/auth/verify-email
+ * Step 2: Validates code, creates Graph Person node with skills and edges, returns session
+ */
+apiRouter.post('/auth/verify-email', async (req, res) => {
+  try {
+    const { email, code } = req.body;
+    if (!email || !code) {
+      return res.status(400).json({
+        success: false,
+        error: 'missing_fields',
+        message: 'Email and 6-digit verification code are required.',
+      });
+    }
+    const result = await completeVerification({ email, code });
+    return res.json(result);
+  } catch (err) {
+    console.error('Verification error:', err);
+    return res.status(400).json({
+      success: false,
+      error: 'verification_failed',
+      message: err.message || 'Verification failed.',
+    });
+  }
+});
+
+/**
+ * POST /api/auth/resend-code
+ */
+apiRouter.post('/auth/resend-code', async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        error: 'missing_email',
+        message: 'Email is required to resend code.',
+      });
+    }
+    const result = await resendVerificationCode(email);
+    return res.json(result);
+  } catch (err) {
+    console.error('Resend code error:', err);
+    return res.status(400).json({
+      success: false,
+      error: 'resend_failed',
+      message: err.message || 'Failed to resend verification code.',
+    });
+  }
+});
+
+/**
+ * POST /api/auth/login
+ * Log in via email/password or 1-Click Demo Account
+ */
+apiRouter.post('/auth/login', async (req, res) => {
+  try {
+    const result = await authenticateUser(req.body);
+    return res.json(result);
+  } catch (err) {
+    console.error('Login error:', err);
+    return res.status(401).json({
+      success: false,
+      error: 'login_failed',
+      message: err.message || 'Invalid credentials.',
+    });
+  }
+});
+
+/**
+ * GET /api/auth/me
+ * Fetch current authenticated user
+ */
+apiRouter.get('/auth/me', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization || '';
+    const token = authHeader.replace(/^Bearer\s+/i, '');
+    const user = getUserByToken(token);
+
+    if (!user) {
+      return res.status(401).json({ success: false, authenticated: false, user: null });
+    }
+
+    return res.json({
+      success: true,
+      authenticated: true,
+      user,
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+/**
+ * POST /api/auth/logout
+ */
+apiRouter.post('/auth/logout', (req, res) => {
+  const authHeader = req.headers.authorization || '';
+  const token = authHeader.replace(/^Bearer\s+/i, '');
+  removeSession(token);
+  return res.json({ success: true, message: 'Logged out successfully.' });
+});
+
+/**
+ * GET /api/notifications
+ * Fetch live notification badges, incoming team offers, and connection requests
+ */
+apiRouter.get('/notifications', (req, res) => {
+  try {
+    const authHeader = req.headers.authorization || '';
+    const token = authHeader.replace(/^Bearer\s+/i, '');
+    const user = getUserByToken(token);
+    const userId = user?.id || req.query.userId || 'default';
+
+    const data = getNotifications(userId);
+    return res.json({ success: true, ...data });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+/**
+ * POST /api/notifications/mark-read
+ */
+apiRouter.post('/notifications/mark-read', (req, res) => {
+  try {
+    const authHeader = req.headers.authorization || '';
+    const token = authHeader.replace(/^Bearer\s+/i, '');
+    const user = getUserByToken(token);
+    const userId = user?.id || req.body.userId || 'default';
+
+    markAlertsRead(userId);
+    return res.json({ success: true, message: 'Alerts marked as read.' });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+/**
+ * POST /api/offers/send
+ * Recruiter or Founder extends a formal team offer to a candidate
+ */
+apiRouter.post('/offers/send', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization || '';
+    const token = authHeader.replace(/^Bearer\s+/i, '');
+    const user = getUserByToken(token);
+
+    const recruiter = user || {
+      id: req.body.recruiterId || 'p1',
+      name: req.body.recruiterName || 'Founding Lead',
+      company: req.body.teamName || 'Apex AI',
+      avatarUrl: req.body.recruiterAvatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80',
+    };
+
+    const {
+      candidateId,
+      candidateName,
+      candidateAvatar,
+      roleName,
+      teamName,
+      equity,
+      comp,
+      note,
+    } = req.body;
+
+    const result = await sendTeamOffer({
+      recruiter,
+      candidateId,
+      candidateName,
+      candidateAvatar,
+      roleName,
+      teamName,
+      equity,
+      comp,
+      note,
+    });
+
+    return res.json(result);
+  } catch (err) {
+    console.error('Error sending team offer:', err);
+    return res.status(400).json({ success: false, error: err.message });
+  }
+});
+
+/**
+ * POST /api/offers/:offerId/respond
+ * Candidate accepts or declines a team offer
+ */
+apiRouter.post('/offers/:offerId/respond', async (req, res) => {
+  try {
+    const { offerId } = req.params;
+    const { status } = req.body; // 'accepted' | 'declined'
+    const authHeader = req.headers.authorization || '';
+    const token = authHeader.replace(/^Bearer\s+/i, '');
+    const user = getUserByToken(token);
+
+    const result = await respondToTeamOffer({ offerId, status, user });
+    return res.json(result);
+  } catch (err) {
+    console.error('Error responding to offer:', err);
+    return res.status(400).json({ success: false, error: err.message });
+  }
+});
+
+/**
+ * POST /api/connections/request
+ * Send a warm graph connection request
+ */
+apiRouter.post('/connections/request', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization || '';
+    const token = authHeader.replace(/^Bearer\s+/i, '');
+    const user = getUserByToken(token);
+
+    const sender = user || {
+      id: req.body.senderId || 'p1',
+      name: req.body.senderName || 'Elena Rostova',
+      title: 'Founder & CEO',
+      company: 'Apex Robotics AI',
+    };
+
+    const { receiverId, context } = req.body;
+    const result = await sendConnectionRequest({ sender, receiverId, context });
+    return res.json(result);
+  } catch (err) {
+    return res.status(400).json({ success: false, error: err.message });
+  }
+});
+
+/**
+ * POST /api/connections/:reqId/respond
+ * Accept or decline a connection request
+ */
+apiRouter.post('/connections/:reqId/respond', async (req, res) => {
+  try {
+    const { reqId } = req.params;
+    const { status } = req.body; // 'accepted' | 'declined'
+    const authHeader = req.headers.authorization || '';
+    const token = authHeader.replace(/^Bearer\s+/i, '');
+    const user = getUserByToken(token);
+
+    const result = await respondToConnectionRequest({ reqId, status, user });
+    return res.json(result);
+  } catch (err) {
+    return res.status(400).json({ success: false, error: err.message });
+  }
+});
+
 

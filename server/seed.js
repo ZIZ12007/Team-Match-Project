@@ -101,8 +101,9 @@ export async function seedDatabase() {
     console.log(`Seeding ${SKILLS.length} skills...`);
     for (const skill of SKILLS) {
       await session.run(
-        `MERGE (s:Skill {id: $id})
-         SET s.name = $name, s.category = $category`,
+        `MERGE (s:Skill {name: $name})
+         ON CREATE SET s.id = $id, s.category = $category
+         ON MATCH SET s.category = $category, s.id = coalesce(s.id, $id)`,
         { id: skill.id, name: skill.name, category: skill.category }
       );
     }
@@ -111,8 +112,9 @@ export async function seedDatabase() {
     console.log(`Seeding ${COMPANIES.length} companies...`);
     for (const comp of COMPANIES) {
       await session.run(
-        `MERGE (c:Company {id: $id})
-         SET c.name = $name, c.industry = $industry, c.size = $size, c.location = $location`,
+        `MERGE (c:Company {name: $name})
+         ON CREATE SET c.id = $id, c.industry = $industry, c.size = $size, c.location = $location
+         ON MATCH SET c.industry = $industry, c.size = $size, c.location = $location, c.id = coalesce(c.id, $id)`,
         { id: comp.id, name: comp.name, industry: comp.industry, size: comp.size, location: comp.location }
       );
     }
@@ -121,24 +123,25 @@ export async function seedDatabase() {
     console.log(`Seeding ${PROJECTS.length} projects...`);
     for (const proj of PROJECTS) {
       await session.run(
-        `MERGE (pr:Project {id: $id})
-         SET pr.name = $name, pr.summary = $summary, pr.status = $status`,
+        `MERGE (pr:Project {name: $name})
+         ON CREATE SET pr.id = $id, pr.summary = $summary, pr.status = $status
+         ON MATCH SET pr.summary = $summary, pr.status = $status, pr.id = coalesce(pr.id, $id)`,
         { id: proj.id, name: proj.name, summary: proj.summary, status: proj.status }
       );
 
       // Link Project -> Company
       await session.run(
-        `MATCH (pr:Project {id: $projId}), (c:Company {id: $compId})
+        `MATCH (pr:Project {name: $projName}), (c:Company {id: $compId})
          MERGE (pr)-[:BUILT_FOR]->(c)`,
-        { projId: proj.id, compId: proj.companyId }
+        { projName: proj.name, compId: proj.companyId }
       );
 
       // Link Project -> Required Skills
       for (const skillName of proj.requiredSkills) {
         await session.run(
-          `MATCH (pr:Project {id: $projId}), (s:Skill {name: $skillName})
+          `MATCH (pr:Project {name: $projName}), (s:Skill {name: $skillName})
            MERGE (pr)-[:REQUIRES_SKILL]->(s)`,
-          { projId: proj.id, skillName }
+          { projName: proj.name, skillName }
         );
       }
     }
@@ -207,10 +210,10 @@ export async function seedDatabase() {
           const level = 2 + ((i + sIdx) % 4);
           const years = 1 + ((i + sIdx * 2) % 9);
           await session.run(
-            `MATCH (person:Person {id: $pId}), (s:Skill {id: $sId})
+            `MATCH (person:Person {id: $pId}), (s:Skill {name: $sName})
              MERGE (person)-[hs:HAS_SKILL]->(s)
              SET hs.level = $level, hs.years = $years`,
-            { pId: p.id, sId: skillObj.id, level, years }
+            { pId: p.id, sName: skillObj.name, level, years }
           );
         }
       }
@@ -265,7 +268,7 @@ export async function seedDatabase() {
           const ctx = CONNECTION_CONTEXTS[(a * 3 + b) % CONNECTION_CONTEXTS.length];
           await session.run(
             `MATCH (p1:Person {id: $id1}), (p2:Person {id: $id2})
-             MERGE (p1)-[k:KNOWS]-(p2)
+             MERGE (p1)-[k:KNOWS]->(p2)
              SET k.context = $ctx, k.strength = $strength`,
             { id1: anchorIds[a], id2: anchorIds[b], ctx, strength: 4 + ((a + b) % 2) }
           );
@@ -277,7 +280,7 @@ export async function seedDatabase() {
     await session.run(`
       MATCH (p1:Person)-[:WORKS_AT]->(c:Company)<-[:WORKS_AT]-(p2:Person)
       WHERE p1.id < p2.id
-      MERGE (p1)-[k:KNOWS]-(p2)
+      MERGE (p1)-[k:KNOWS]->(p2)
       ON CREATE SET k.context = 'Colleagues at ' + c.name, k.strength = 4
     `);
 
@@ -285,7 +288,7 @@ export async function seedDatabase() {
     await session.run(`
       MATCH (p1:Person)-[:WORKED_ON]->(pr:Project)<-[:WORKED_ON]-(p2:Person)
       WHERE p1.id < p2.id
-      MERGE (p1)-[k:KNOWS]-(p2)
+      MERGE (p1)-[k:KNOWS]->(p2)
       ON CREATE SET k.context = 'Collaborated on ' + pr.name, k.strength = 5
     `);
 
@@ -302,7 +305,7 @@ export async function seedDatabase() {
           const ctx = CONNECTION_CONTEXTS[(i + targetId.charCodeAt(1)) % CONNECTION_CONTEXTS.length];
           await session.run(
             `MATCH (p1:Person {id: $id1}), (p2:Person {id: $id2})
-             MERGE (p1)-[k:KNOWS]-(p2)
+             MERGE (p1)-[k:KNOWS]->(p2)
              ON CREATE SET k.context = $ctx, k.strength = 3`,
             { id1: p.id, id2: targetId, ctx }
           );

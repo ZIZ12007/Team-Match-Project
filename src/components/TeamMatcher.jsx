@@ -13,30 +13,44 @@ import {
   X,
   Building2,
   Network,
+  Send,
+  Briefcase,
+  Trash2,
+  BookmarkPlus,
 } from 'lucide-react';
 import { api } from '../api/client';
+import { SendOfferModal } from './SendOfferModal';
 
-const PRESET_ROLES = [
+const INITIAL_PRESET_ROLES = [
   {
+    id: 'role_1',
     role: 'AI Agent & Graph Architect',
     skills: ['LLM Fine-tuning', 'RAG Architecture', 'Cypher & Graph DBs', 'PyTorch'],
+    isDefault: true,
   },
   {
+    id: 'role_2',
     role: 'High-Performance Graph Core Engineer',
     skills: ['Cypher & Graph DBs', 'Distributed Systems', 'Rust', 'Neo4j / CognoDB'],
+    isDefault: true,
   },
   {
+    id: 'role_3',
     role: 'Full-Stack Canvas & Observability Lead',
     skills: ['React & Next.js', 'Canvas & D3 / Graph Viz', 'TypeScript & JavaScript', 'Tailwind CSS'],
+    isDefault: true,
   },
   {
+    id: 'role_4',
     role: 'AI Alignment & Data Engine Specialist',
     skills: ['LLM Fine-tuning', 'PostgreSQL & pgvector', 'PyTorch', 'Vector Embeddings'],
+    isDefault: true,
   },
 ];
 
 export function TeamMatcher({
   allSkills = [],
+  currentUser,
   onViewProfile,
   onExploreGraph,
   onFindPath,
@@ -46,11 +60,41 @@ export function TeamMatcher({
     'LLM Fine-tuning',
     'RAG Architecture',
   ]);
-  const [seekerId, setSeekerId] = useState('p1'); // Elena Rostova by default
+  const [seekerId, setSeekerId] = useState(currentUser?.id || 'p1');
   const [minLevel, setMinLevel] = useState(2);
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
+
+  // Custom role preset state
+  const [rolePresets, setRolePresets] = useState(() => {
+    const saved = localStorage.getItem('startup_graph_custom_roles');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {}
+    }
+    return INITIAL_PRESET_ROLES;
+  });
+
+  const [isAddingCustomRole, setIsAddingCustomRole] = useState(false);
+  const [customRoleTitle, setCustomRoleTitle] = useState('');
+
+  // Offer modal state
+  const [selectedCandidateForOffer, setSelectedCandidateForOffer] = useState(null);
+  const [activeOffers, setActiveOffers] = useState({}); // { [candidateId]: offerObj }
+
+  // Persist custom roles
+  useEffect(() => {
+    localStorage.setItem('startup_graph_custom_roles', JSON.stringify(rolePresets));
+  }, [rolePresets]);
+
+  // Sync seekerId with currentUser if provided
+  useEffect(() => {
+    if (currentUser?.id) {
+      setSeekerId(currentUser.id);
+    }
+  }, [currentUser]);
 
   // Run Match API call
   const runMatch = async () => {
@@ -75,7 +119,7 @@ export function TeamMatcher({
   // Run initial match
   useEffect(() => {
     runMatch();
-  }, []);
+  }, [seekerId]);
 
   const toggleSkill = (skillName) => {
     if (selectedSkills.includes(skillName)) {
@@ -85,9 +129,45 @@ export function TeamMatcher({
     }
   };
 
+  // Save current skill selection as custom role template
+  const handleSaveCustomRole = (e) => {
+    e?.preventDefault();
+    if (!customRoleTitle.trim()) return;
+    if (selectedSkills.length === 0) {
+      alert('Please select at least one skill to create a role template.');
+      return;
+    }
+
+    const newRole = {
+      id: `custom_${Date.now()}`,
+      role: customRoleTitle.trim(),
+      skills: [...selectedSkills],
+      isDefault: false,
+    };
+
+    setRolePresets((prev) => [newRole, ...prev]);
+    setCustomRoleTitle('');
+    setIsAddingCustomRole(false);
+  };
+
+  // Delete custom role template
+  const handleDeleteRole = (id, e) => {
+    e.stopPropagation();
+    setRolePresets((prev) => prev.filter((r) => r.id !== id));
+  };
+
+  const handleOfferSentSuccess = (offer) => {
+    if (offer && offer.candidateId) {
+      setActiveOffers((prev) => ({
+        ...prev,
+        [offer.candidateId]: offer,
+      }));
+    }
+  };
+
   return (
     <div className="space-y-6">
-      {/* Top Banner with deliberate fintech editorial styling */}
+      {/* Top Banner */}
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
@@ -97,17 +177,17 @@ export function TeamMatcher({
           <div>
             <div className="flex items-center gap-2 mb-2">
               <span className="rounded-md border border-white bg-[#FF007A] text-white px-2.5 py-0.5 font-mono-code text-xs font-bold uppercase">
-                GRAPH ALGORITHMS // MATCH_ENGINE_V2
+                DREAM TEAM BUILDER // SKILL + MUTUAL FRIEND MATCHER
               </span>
               <span className="rounded-md border border-white/20 bg-white/10 text-white px-2 py-0.5 font-mono-code text-xs">
-                WEIGHTED PROXIMITY
+                HIGH TRUST HIRING
               </span>
             </div>
             <h2 className="font-display text-2xl sm:text-3xl font-extrabold tracking-tight">
-              Graph-Augmented Team Matcher
+              Smart Team Matcher & Offer Center
             </h2>
             <p className="text-xs sm:text-sm text-white/80 font-mono-code mt-1 max-w-2xl leading-relaxed">
-              Ranks candidates by combining required skill overlap with real network proximity (1-hop, 2-hop shortest paths) to eliminate cold outreach.
+              Finds candidates who have the exact skills you need <strong>and</strong> already know people in your network for instant trust and easy introductions. Extend official offers directly to candidates.
             </p>
           </div>
           <motion.button
@@ -117,14 +197,33 @@ export function TeamMatcher({
             disabled={loading || selectedSkills.length === 0}
             className="brutal-btn bg-[#0052FF] text-white px-6 py-3 font-display text-sm font-extrabold uppercase shadow-[3px_3px_0px_#FFFFFF] hover:bg-[#0042D9] self-start sm:self-center shrink-0"
           >
-            {loading ? 'CALCULATING GRAPH SCORES...' : 'FIND CANDIDATES →'}
+            {loading ? 'RANKING CANDIDATES...' : 'FIND BEST MATCHES →'}
           </motion.button>
         </div>
       </motion.div>
 
+      {/* Non-Technical Quick Guide Card */}
+      <div className="p-4 rounded-xl border-2 border-[#08123B] bg-[#F4F6FB] text-[#08123B] space-y-1.5 shadow-[3px_3px_0px_#08123B]">
+        <div className="flex items-center gap-2 font-display text-xs font-extrabold uppercase text-[#0052FF]">
+          <Sparkles className="h-4 w-4" />
+          <span>How to scout talent & extend offers in 3 simple steps:</span>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs font-mono-code text-[#4A5578] pt-1">
+          <div className="p-2.5 bg-white rounded-lg border border-[#08123B]/15">
+            <strong>1. Pick or Define a Role</strong> (e.g. AI Architect or create your own custom role).
+          </div>
+          <div className="p-2.5 bg-white rounded-lg border border-[#08123B]/15">
+            <strong>2. Click "Find Best Matches"</strong> to rank candidates by skill and graph proximity.
+          </div>
+          <div className="p-2.5 bg-white rounded-lg border border-[#08123B]/15">
+            <strong>3. Click "Extend Team Offer"</strong> on any candidate to send compensation & equity package!
+          </div>
+        </div>
+      </div>
+
       {/* Query Builder Config Panel */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Column: Preset Templates & Seeker Configuration */}
+        {/* Left Column: Preset & Custom Role Templates */}
         <motion.div
           initial={{ opacity: 0, x: -12 }}
           animate={{ opacity: 1, x: 0 }}
@@ -132,32 +231,101 @@ export function TeamMatcher({
           className="brutal-card p-5 bg-white space-y-5 shadow-[4px_4px_0px_#08123B]"
         >
           <div>
-            <h3 className="font-mono-code text-xs font-bold uppercase text-[#08123B] mb-2.5 flex items-center gap-1.5">
-              <Shield className="h-4 w-4 text-[#0052FF]" />
-              1. PRESET ROLE TEMPLATES
-            </h3>
-            <div className="space-y-2">
-              {PRESET_ROLES.map((preset, idx) => (
-                <motion.button
-                  key={idx}
+            <div className="flex items-center justify-between mb-2.5">
+              <h3 className="font-mono-code text-xs font-bold uppercase text-[#08123B] flex items-center gap-1.5">
+                <Shield className="h-4 w-4 text-[#0052FF]" />
+                1. ROLE TEMPLATES
+              </h3>
+
+              <button
+                onClick={() => setIsAddingCustomRole(!isAddingCustomRole)}
+                className="font-mono-code text-[11px] font-bold text-[#0052FF] hover:underline flex items-center gap-1"
+              >
+                <Plus className="h-3 w-3" />
+                <span>{isAddingCustomRole ? 'CLOSE' : '+ CUSTOM ROLE'}</span>
+              </button>
+            </div>
+
+            {/* Custom Role Input Box */}
+            <AnimatePresence>
+              {isAddingCustomRole && (
+                <motion.form
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  onSubmit={handleSaveCustomRole}
+                  className="p-3 mb-3 bg-[#EFF6FF] border-2 border-[#0052FF] rounded-xl space-y-2 overflow-hidden shadow-[2px_2px_0px_#0052FF]"
+                >
+                  <label className="block font-mono-code text-[10px] font-extrabold uppercase text-[#0052FF]">
+                    New Custom Role Name:
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={customRoleTitle}
+                    onChange={(e) => setCustomRoleTitle(e.target.value)}
+                    placeholder="e.g. Lead Distributed Rust Specialist"
+                    className="w-full rounded-lg border border-[#0052FF] bg-white px-2.5 py-1.5 text-xs font-mono-code font-bold focus:outline-none"
+                  />
+                  <div className="flex items-center justify-between pt-1">
+                    <span className="text-[10px] font-mono-code text-[#4A5578]">
+                      Includes {selectedSkills.length} selected skills
+                    </span>
+                    <button
+                      type="submit"
+                      className="brutal-btn bg-[#0052FF] text-white px-3 py-1 text-[11px] font-display font-extrabold uppercase hover:bg-[#0042D9]"
+                    >
+                      SAVE TEMPLATE
+                    </button>
+                  </div>
+                </motion.form>
+              )}
+            </AnimatePresence>
+
+            <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+              {rolePresets.map((preset) => (
+                <motion.div
+                  key={preset.id || preset.role}
                   whileHover={{ scale: 1.01, x: 2 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={() => setSelectedSkills(preset.skills)}
-                  className="w-full text-left p-2.5 rounded-lg border-2 border-[#08123B] bg-[#F4F6FB] hover:bg-[#0052FF] hover:text-white transition-all group shadow-[2px_2px_0px_#08123B]"
+                  className="w-full text-left p-2.5 rounded-lg border-2 border-[#08123B] bg-[#F4F6FB] hover:bg-[#0052FF] hover:text-white transition-all group shadow-[2px_2px_0px_#08123B] cursor-pointer flex items-center justify-between gap-2"
                 >
-                  <p className="text-xs font-extrabold font-display group-hover:text-white">{preset.role}</p>
-                  <p className="text-[10px] text-[#4A5578] font-mono-code group-hover:text-white/80 line-clamp-1 mt-0.5">
-                    {preset.skills.join(' • ')}
-                  </p>
-                </motion.button>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <p className="text-xs font-extrabold font-display group-hover:text-white truncate">
+                        {preset.role}
+                      </p>
+                      {!preset.isDefault && (
+                        <span className="rounded bg-[#08123B] group-hover:bg-white text-white group-hover:text-[#08123B] px-1 py-0.2 text-[9px] font-mono-code font-bold uppercase shrink-0">
+                          CUSTOM
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[10px] text-[#4A5578] font-mono-code group-hover:text-white/80 line-clamp-1 mt-0.5">
+                      {preset.skills.join(' • ')}
+                    </p>
+                  </div>
+
+                  {!preset.isDefault && (
+                    <button
+                      onClick={(e) => handleDeleteRole(preset.id, e)}
+                      className="p-1 rounded text-red-500 hover:text-red-700 group-hover:text-white hover:bg-black/10 transition-colors shrink-0"
+                      title="Delete custom role"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </motion.div>
               ))}
             </div>
           </div>
 
+          {/* Seeker Identity Selector */}
           <div className="pt-4 border-t-2 border-[#08123B]/15">
             <h3 className="font-mono-code text-xs font-bold uppercase text-[#08123B] mb-2 flex items-center gap-1.5">
               <Users className="h-4 w-4 text-[#FF007A]" />
-              2. SEEKER IDENTITY (ANCHOR)
+              2. RECRUITER / SEEKER ANCHOR
             </h3>
             <p className="text-[11px] text-[#4A5578] font-mono-code mb-2">
               Proximity scores and introduction paths are computed relative to this person node.
@@ -167,14 +335,16 @@ export function TeamMatcher({
               onChange={(e) => setSeekerId(e.target.value)}
               className="w-full rounded-lg border-2 border-[#08123B] bg-[#F4F6FB] p-2.5 font-mono-code text-xs font-bold focus:outline-none shadow-[2px_2px_0px_#08123B]"
             >
-              <option value="p1">Elena Rostova (Founder & CEO @ NeoGraph Labs)</option>
+              <option value="p1">Elena Rostova (Founder & CEO @ Apex Robotics AI)</option>
               <option value="p2">Marcus Vance (CTO & Co-Founder @ GraphForge AI)</option>
+              <option value="p3">Chloe Dubois (VP of AI Product)</option>
               <option value="p7">Siddharth Menon (Founding Engineer @ CognoDB)</option>
-              <option value="p14">Aleksei Volkov (Principal Distributed Systems Engineer)</option>
-              <option value="p18">Kavita Sharma (Lead Graph Algorithms Researcher)</option>
+              <option value="p10">Kenji Takahashi (Principal Security Lead)</option>
+              <option value="p14">Aleksei Volkov (Principal Distributed Systems)</option>
             </select>
           </div>
 
+          {/* Skill Proficiency Level Slider */}
           <div className="pt-4 border-t-2 border-[#08123B]/15">
             <div className="flex items-center justify-between mb-1.5">
               <h3 className="font-mono-code text-xs font-bold uppercase text-[#08123B] flex items-center gap-1.5">
@@ -214,12 +384,22 @@ export function TeamMatcher({
                 Select target graph skills to evaluate multi-skill compatibility
               </p>
             </div>
-            <button
-              onClick={() => setSelectedSkills([])}
-              className="text-xs font-mono-code font-bold text-[#FF007A] hover:underline"
-            >
-              [CLEAR ALL]
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setIsAddingCustomRole(true)}
+                className="text-xs font-mono-code font-bold text-[#0052FF] hover:underline flex items-center gap-1"
+              >
+                <BookmarkPlus className="h-3.5 w-3.5" />
+                <span>SAVE AS ROLE</span>
+              </button>
+              <span className="text-[#7382A6]">|</span>
+              <button
+                onClick={() => setSelectedSkills([])}
+                className="text-xs font-mono-code font-bold text-[#FF007A] hover:underline"
+              >
+                [CLEAR ALL]
+              </button>
+            </div>
           </div>
 
           {/* Active Skills Chips */}
@@ -284,7 +464,7 @@ export function TeamMatcher({
         </motion.div>
       </div>
 
-      {/* MATCH RESULTS SECTION WITH EMIL KOWALSKI STAGGER & HOVER */}
+      {/* MATCH RESULTS SECTION */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="font-display text-xl font-extrabold text-[#08123B]">
@@ -311,6 +491,7 @@ export function TeamMatcher({
               const hops = cand.hopsToSeeker;
               const isDirect = hops === 1;
               const isWarm = hops === 2;
+              const sentOffer = activeOffers[cand.id];
 
               return (
                 <motion.div
@@ -324,7 +505,7 @@ export function TeamMatcher({
                     delay: idx * 0.04,
                   }}
                   whileHover={{ y: -4 }}
-                  className="brutal-card p-5 bg-white flex flex-col justify-between hover:shadow-[6px_6px_0px_#08123B] transition-shadow"
+                  className="brutal-card p-5 bg-white flex flex-col justify-between hover:shadow-[6px_6px_0px_#08123B] transition-shadow border-2 border-[#08123B]"
                 >
                   <div>
                     {/* Header Score & Proximity Badge */}
@@ -409,38 +590,59 @@ export function TeamMatcher({
                         <span>Intro via: <strong className="text-[#08123B]">{cand.mutualNames.join(', ')}</strong></span>
                       </div>
                     )}
+
+                    {/* Sent Offer Status Badge if extended */}
+                    {sentOffer && (
+                      <div className="mb-3 p-2 bg-[#EBF7EE] border border-[#008A3E] rounded-lg font-mono-code text-xs font-bold text-[#008A3E] flex items-center gap-1.5">
+                        <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
+                        <span>Team offer extended ({sentOffer.roleName})</span>
+                      </div>
+                    )}
                   </div>
 
-                  {/* Actions */}
-                  <div className="pt-3 border-t-2 border-[#08123B]/15 flex items-center gap-2">
+                  {/* Primary Offer and Profile Actions */}
+                  <div className="space-y-2 pt-3 border-t-2 border-[#08123B]/15">
+                    {/* Send Offer Button */}
                     <motion.button
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.96 }}
-                      onClick={() => onViewProfile(cand.id)}
-                      className="brutal-btn flex-1 bg-[#08123B] text-white py-1.5 text-xs font-display font-extrabold uppercase hover:bg-[#0052FF]"
+                      onClick={() => setSelectedCandidateForOffer(cand)}
+                      className="w-full brutal-btn bg-[#FF007A] text-white py-2 text-xs font-display font-extrabold uppercase hover:bg-[#E6006E] flex items-center justify-center gap-1.5 shadow-[3px_3px_0px_#08123B]"
                     >
-                      VIEW PROFILE
+                      <Send className="h-3.5 w-3.5" />
+                      <span>{sentOffer ? 'RE-SEND / UPDATE OFFER' : 'EXTEND TEAM OFFER'}</span>
                     </motion.button>
-                    {hops < 99 && (
+
+                    <div className="flex items-center gap-2">
+                      <motion.button
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.96 }}
+                        onClick={() => onViewProfile(cand.id)}
+                        className="brutal-btn flex-1 bg-[#08123B] text-white py-1.5 text-xs font-display font-extrabold uppercase hover:bg-[#0052FF]"
+                      >
+                        PROFILE
+                      </motion.button>
+                      {hops < 99 && (
+                        <motion.button
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.94 }}
+                          onClick={() => onFindPath(cand.id)}
+                          className="brutal-btn bg-[#0052FF] text-white px-2.5 py-1.5 text-xs font-display font-extrabold uppercase hover:bg-[#0042D9]"
+                          title="View shortest path chain"
+                        >
+                          <GitMerge className="h-3.5 w-3.5" />
+                        </motion.button>
+                      )}
                       <motion.button
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.94 }}
-                        onClick={() => onFindPath(cand.id)}
-                        className="brutal-btn bg-[#FF007A] text-white px-2.5 py-1.5 text-xs font-display font-extrabold uppercase hover:bg-[#E6006E]"
-                        title="View shortest path chain"
+                        onClick={() => onExploreGraph(cand.id)}
+                        className="brutal-btn bg-white text-[#08123B] px-2.5 py-1.5 text-xs font-display font-extrabold uppercase hover:bg-[#F4F6FB]"
+                        title="Inspect graph neighborhood"
                       >
-                        <GitMerge className="h-3.5 w-3.5" />
+                        <Network className="h-3.5 w-3.5" />
                       </motion.button>
-                    )}
-                    <motion.button
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.94 }}
-                      onClick={() => onExploreGraph(cand.id)}
-                      className="brutal-btn bg-white text-[#08123B] px-2.5 py-1.5 text-xs font-display font-extrabold uppercase hover:bg-[#F4F6FB]"
-                      title="Inspect graph neighborhood"
-                    >
-                      <Network className="h-3.5 w-3.5" />
-                    </motion.button>
+                    </div>
                   </div>
                 </motion.div>
               );
@@ -448,6 +650,18 @@ export function TeamMatcher({
           </div>
         )}
       </div>
+
+      {/* Offer Extension Modal */}
+      {selectedCandidateForOffer && (
+        <SendOfferModal
+          isOpen={Boolean(selectedCandidateForOffer)}
+          onClose={() => setSelectedCandidateForOffer(null)}
+          candidate={selectedCandidateForOffer}
+          currentUser={currentUser}
+          defaultRole={rolePresets[0]?.role || 'Core AI Engineer'}
+          onOfferSent={handleOfferSentSuccess}
+        />
+      )}
     </div>
   );
 }

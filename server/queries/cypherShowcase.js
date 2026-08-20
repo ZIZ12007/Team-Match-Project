@@ -4,15 +4,16 @@ export const CYPHER_SHOWCASE_QUERIES = [
     title: 'Multi-Hop Skill Search (Friend of Friend)',
     category: 'Traversals',
     description: 'Find people in my extended 1-2 hop network who possess a specific required skill, ordered by connection proximity and skill proficiency.',
-    cypher: `MATCH (me:Person {id: $personId})-[:KNOWS*1..2]-(candidate:Person)
-MATCH (candidate)-[hs:HAS_SKILL]->(s:Skill {name: $skillName})
+    cypher: `MATCH (me:Person {id: $personId})
+MATCH (candidate:Person)-[hs:HAS_SKILL]->(s:Skill {name: $skillName})
 WHERE me <> candidate
+MATCH path = shortestPath((me)-[:KNOWS*1..2]-(candidate))
 RETURN DISTINCT candidate.name AS name,
        candidate.title AS title,
        hs.level AS skillLevel,
        hs.years AS skillYears,
-       length(shortestPath((me)-[:KNOWS*1..2]-(candidate))) AS hops
-ORDER BY hops ASC, hs.level DESC
+       length(path) AS hops
+ORDER BY hops ASC, skillLevel DESC
 LIMIT 10`,
     defaultParams: {
       personId: 'p1',

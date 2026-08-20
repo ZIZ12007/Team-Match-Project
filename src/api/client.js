@@ -89,4 +89,84 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(payload),
     }),
+
+  // Authentication & Registration API
+  getDemoAccounts: () => fetchJson('/api/auth/demo-accounts'),
+
+  register: (payload) =>
+    fetchJson('/api/auth/register', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+
+  verifyEmail: (payload) =>
+    fetchJson('/api/auth/verify-email', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+
+  resendCode: (email) =>
+    fetchJson('/api/auth/resend-code', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    }),
+
+  login: (payload) =>
+    fetchJson('/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+
+  getMe: (token) =>
+    fetchJson('/api/auth/me', {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    }),
+
+  logout: (token) =>
+    fetchJson('/api/auth/logout', {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    }),
+
+  // Notifications & Interactive Offer / Connection System
+  getNotifications: (token, userId) =>
+    fetchJson(`/api/notifications${userId ? `?userId=${userId}` : ''}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    }),
+
+  markAlertsRead: (token, userId) =>
+    fetchJson('/api/notifications/mark-read', {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: JSON.stringify({ userId }),
+    }),
+
+  sendTeamOffer: (payload, token) =>
+    fetchJson('/api/offers/send', {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: JSON.stringify(payload),
+    }),
+
+  respondToOffer: (offerId, status, token) =>
+    fetchJson(`/api/offers/${encodeURIComponent(offerId)}/respond`, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: JSON.stringify({ status }),
+    }),
+
+  sendConnectionRequest: (payload, token) =>
+    fetchJson('/api/connections/request', {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: JSON.stringify(payload),
+    }),
+
+  respondToConnectionRequest: (reqId, status, token) =>
+    fetchJson(`/api/connections/${encodeURIComponent(reqId)}/respond`, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: JSON.stringify({ status }),
+    }),
 };
+

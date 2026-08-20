@@ -147,6 +147,47 @@ export function CypherPlayground() {
         </div>
       </motion.div>
 
+      {/* Educational Non-Technical Primer */}
+      <div className="brutal-card p-5 bg-[#F4F6FB] border-2 border-[#08123B] shadow-[4px_4px_0px_#08123B] space-y-3">
+        <div className="flex items-center gap-2">
+          <div className="h-6 w-6 rounded-md bg-[#FF007A] text-white flex items-center justify-center font-bold text-xs">
+            💬
+          </div>
+          <h3 className="font-display text-sm font-extrabold text-[#08123B] uppercase">
+            What is a Graph Query? (Non-Technical Primer)
+          </h3>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
+          <div className="p-3 bg-white rounded-xl border border-[#08123B]/15 space-y-1">
+            <span className="font-mono-code text-[11px] font-bold text-[#0052FF]">
+              1. ASCII Pattern Matching
+            </span>
+            <p className="text-xs font-mono-code text-[#4A5578] leading-relaxed">
+              Instead of complex database tables, graph queries use arrows: <code className="bg-[#F4F6FB] px-1 py-0.5 rounded text-[#08123B]">(Person)-[:KNOWS]-&gt;(Friend)</code>. If you can draw it on a whiteboard, you can query it!
+            </p>
+          </div>
+
+          <div className="p-3 bg-white rounded-xl border border-[#08123B]/15 space-y-1">
+            <span className="font-mono-code text-[11px] font-bold text-[#008A3E]">
+              2. Why Graph Beats SQL
+            </span>
+            <p className="text-xs font-mono-code text-[#4A5578] leading-relaxed">
+              Relational SQL databases crash or slow down on 3+ degree friend lookups because of join tables. Graph databases follow direct memory pointers in <strong>1 to 4 milliseconds</strong>.
+            </p>
+          </div>
+
+          <div className="p-3 bg-white rounded-xl border border-[#08123B]/15 space-y-1">
+            <span className="font-mono-code text-[11px] font-bold text-[#FF007A]">
+              3. Try It in 1-Click
+            </span>
+            <p className="text-xs font-mono-code text-[#4A5578] leading-relaxed">
+              Select any query button below and click <strong>"RUN CYPHER"</strong> to watch the live CognoDB engine execute the query in real time.
+            </p>
+          </div>
+        </div>
+      </div>
+
       {/* Preset Query Tabs */}
       <div className="flex flex-wrap gap-2">
         {showcaseQueries.map((q) => {
@@ -167,6 +208,22 @@ export function CypherPlayground() {
             </motion.button>
           );
         })}
+      </div>
+
+      {/* Plain English Explanation for Non-Technical Users */}
+      <div className="p-4 rounded-xl border-2 border-[#08123B] bg-[#FFFBEB] text-[#08123B] space-y-1 shadow-[3px_3px_0px_#08123B]">
+        <div className="flex items-center gap-2">
+          <span className="rounded bg-[#D97706] text-white px-2 py-0.5 font-mono-code text-[10px] font-bold uppercase">
+            PLAIN ENGLISH EXPLANATION
+          </span>
+          <span className="font-display text-sm font-extrabold text-[#08123B]">
+            {activeItem?.title || 'Selected Graph Query'}
+          </span>
+        </div>
+        <p className="text-xs font-mono-code text-[#78350F] leading-relaxed">
+          {activeItem?.description ||
+            'This query searches the graph database for specific relationship patterns. Click "RUN CYPHER" above to test it live.'}
+        </p>
       </div>
 
       {/* Query Editor & SQL Comparison */}

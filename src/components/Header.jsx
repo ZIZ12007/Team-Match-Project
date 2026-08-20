@@ -1,6 +1,22 @@
-import React from 'react';
-import { motion } from 'motion/react';
-import { Network, Search, Users, GitMerge, Terminal, Database, RefreshCw, Sparkles, Activity } from 'lucide-react';
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import {
+  Network,
+  Search,
+  Users,
+  GitMerge,
+  Terminal,
+  Database,
+  RefreshCw,
+  Sparkles,
+  Lightbulb,
+  User,
+  LogOut,
+  Compass,
+  ChevronDown,
+  UserPlus,
+  LogIn,
+} from 'lucide-react';
 
 export function Header({
   activeTab,
@@ -9,16 +25,23 @@ export function Header({
   checkingHealth,
   onRefreshHealth,
   onOpenMatch,
+  onOpenGuide,
+  onOpenTour,
+  currentUser,
+  onOpenAuth,
+  onLogout,
+  onViewProfile,
 }) {
   const isDbConnected = health?.connected ?? false;
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
 
   const navItems = [
-    { id: 'search', label: 'People Search', icon: Search },
-    { id: 'graph', label: 'Network Graph', icon: Network },
+    { id: 'search', label: 'Talent Search', icon: Search },
+    { id: 'graph', label: 'Network Map', icon: Network },
     { id: 'match', label: 'Team Matcher', icon: Users },
-    { id: 'path', label: 'Shortest Path', icon: GitMerge },
-    { id: 'cypher', label: 'Cypher Query Lab', icon: Terminal },
-    { id: 'database', label: 'Telemetry & Stats', icon: Database },
+    { id: 'path', label: 'Warm Intro Path', icon: GitMerge },
+    { id: 'cypher', label: 'Cypher Lab', icon: Terminal },
+    { id: 'database', label: 'Database Stats', icon: Database },
   ];
 
   return (
@@ -41,7 +64,7 @@ export function Header({
                 STARTUP<span className="text-[#0052FF]">GRAPH</span>
               </span>
               <span className="text-[9px] font-mono-code font-bold uppercase tracking-widest text-[#FF007A] leading-none mt-1">
-                FINTECH INTEL
+                TALENT NETWORK INTEL
               </span>
             </div>
           </motion.button>
@@ -79,46 +102,120 @@ export function Header({
         </nav>
 
         {/* Zone 3: Actions & Database Status Badge */}
-        <div className="flex items-center gap-2 sm:gap-3">
-          {/* Documentation PDF Download */}
-          <motion.a
-            href="/api/docs/pdf"
-            target="_blank"
-            rel="noopener noreferrer"
-            whileHover={{ y: -1, scale: 1.02 }}
-            whileTap={{ scale: 0.97 }}
-            title="Download Full Technical PDF Documentation Manual"
-            className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-mono-code font-bold uppercase border-2 border-[#08123B] bg-[#F4F6FB] text-[#08123B] shadow-[2px_2px_0px_#08123B] hover:bg-[#08123B] hover:text-white transition-all whitespace-nowrap"
-          >
-            <span>DOCS PDF</span>
-          </motion.a>
-
-          {/* DB Status Stamp */}
+        <div className="flex items-center gap-2 sm:gap-2.5">
+          {/* App Tour / Intro Walkthrough Button */}
           <motion.button
-            onClick={onRefreshHealth}
-            whileHover={{ scale: 1.02 }}
+            onClick={onOpenTour}
+            whileHover={{ y: -1, scale: 1.03 }}
             whileTap={{ scale: 0.97 }}
-            title="Click to refresh CognoDB connection status"
-            className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-mono-code font-bold uppercase border-2 border-[#08123B] shadow-[2px_2px_0px_#08123B] transition-transform ${
-              isDbConnected
-                ? 'bg-[#EBF7EE] text-[#08123B]'
-                : 'bg-[#FF007A] text-white'
-            }`}
+            className="flex items-center gap-1.5 rounded-lg border-2 border-[#08123B] bg-[#FFCC00] text-[#08123B] px-3 py-1.5 text-xs font-display font-extrabold uppercase shadow-[2.5px_2.5px_0px_#08123B] hover:bg-[#FFE066] transition-all whitespace-nowrap"
+            title="Open step-by-step introduction tour"
           >
-            <span className={`h-2 w-2 rounded-full border border-[#08123B] ${isDbConnected ? 'bg-[#00D26A] animate-pulse' : 'bg-white'}`} />
-            <span className="hidden sm:inline">
-              {checkingHealth ? 'CHECKING...' : isDbConnected ? 'COGNO_DB: LIVE' : 'DB: OFFLINE'}
-            </span>
-            <span className="sm:hidden">{isDbConnected ? 'LIVE' : 'OFF'}</span>
-            <RefreshCw className={`h-3 w-3 ${checkingHealth ? 'animate-spin' : ''}`} />
+            <Compass className="h-3.5 w-3.5 fill-[#08123B]" />
+            <span className="hidden sm:inline">APP TOUR</span>
+            <span className="sm:hidden">TOUR</span>
           </motion.button>
+
+          {/* User Auth Section */}
+          {currentUser ? (
+            <div className="relative">
+              <motion.button
+                onClick={() => setUserMenuOpen(!userMenuOpen)}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className="flex items-center gap-2 rounded-lg border-2 border-[#08123B] bg-[#EBF7EE] p-1.5 sm:px-2.5 sm:py-1.5 font-mono-code text-xs font-bold text-[#08123B] shadow-[2px_2px_0px_#08123B]"
+              >
+                <img
+                  src={
+                    currentUser.avatarUrl ||
+                    'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80'
+                  }
+                  alt={currentUser.name}
+                  className="h-6 w-6 rounded-full border border-[#08123B] object-cover"
+                />
+                <span className="hidden sm:inline font-extrabold text-[#08123B] truncate max-w-[110px]">
+                  {currentUser.name}
+                </span>
+                <span className="hidden lg:inline-block px-1.5 py-0.2 rounded bg-[#008A3E] text-white text-[9px] uppercase font-bold">
+                  YOU
+                </span>
+                <ChevronDown className="h-3.5 w-3.5 text-[#08123B]" />
+              </motion.button>
+
+              {/* User Dropdown Menu */}
+              <AnimatePresence>
+                {userMenuOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 6, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 6, scale: 0.95 }}
+                    className="absolute right-0 mt-2 w-56 rounded-xl border-3 border-[#08123B] bg-white p-2 shadow-[4px_4px_0px_#08123B] z-50 space-y-1 font-mono-code text-xs"
+                  >
+                    <div className="p-2 border-b border-[#08123B]/15 mb-1">
+                      <p className="font-display font-black text-[#08123B] truncate">
+                        {currentUser.name}
+                      </p>
+                      <p className="text-[10px] text-[#7382A6] truncate">{currentUser.title}</p>
+                      <p className="text-[10px] text-[#0052FF] font-bold truncate">
+                        {currentUser.company || 'Active in Startup Graph'}
+                      </p>
+                    </div>
+
+                    <button
+                      onClick={() => {
+                        setUserMenuOpen(false);
+                        if (currentUser.id && onViewProfile) onViewProfile(currentUser.id);
+                      }}
+                      className="w-full text-left p-2 rounded-lg hover:bg-[#F4F6FB] text-[#08123B] font-bold flex items-center gap-2"
+                    >
+                      <User className="h-3.5 w-3.5 text-[#0052FF]" />
+                      <span>View My Graph Node</span>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setUserMenuOpen(false);
+                        onLogout();
+                      }}
+                      className="w-full text-left p-2 rounded-lg hover:bg-[#FFF0F5] text-[#FF007A] font-bold flex items-center gap-2"
+                    >
+                      <LogOut className="h-3.5 w-3.5 text-[#FF007A]" />
+                      <span>Sign Out</span>
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          ) : (
+            <div className="flex items-center gap-1.5">
+              <motion.button
+                onClick={() => onOpenAuth('login')}
+                whileHover={{ y: -1, scale: 1.02 }}
+                whileTap={{ scale: 0.97 }}
+                className="flex items-center gap-1 rounded-lg border-2 border-[#08123B] bg-[#F4F6FB] px-2.5 py-1.5 text-xs font-mono-code font-bold uppercase text-[#08123B] shadow-[2px_2px_0px_#08123B] hover:bg-[#08123B] hover:text-white transition-all whitespace-nowrap"
+              >
+                <LogIn className="h-3.5 w-3.5" />
+                <span>LOG IN</span>
+              </motion.button>
+
+              <motion.button
+                onClick={() => onOpenAuth('signup')}
+                whileHover={{ y: -1, scale: 1.02 }}
+                whileTap={{ scale: 0.97 }}
+                className="flex items-center gap-1 rounded-lg border-2 border-[#08123B] bg-[#008A3E] px-2.5 py-1.5 text-xs font-display font-extrabold uppercase text-white shadow-[2px_2px_0px_#08123B] hover:bg-[#007233] transition-all whitespace-nowrap"
+              >
+                <UserPlus className="h-3.5 w-3.5" />
+                <span>SIGN UP</span>
+              </motion.button>
+            </div>
+          )}
 
           {/* Primary CTA */}
           <motion.button
             onClick={onOpenMatch}
             whileHover={{ y: -1, scale: 1.03 }}
             whileTap={{ scale: 0.97, y: 1 }}
-            className="flex items-center gap-1.5 rounded-lg border-2 border-[#08123B] bg-[#0052FF] px-3.5 py-1.5 text-xs sm:text-sm font-display font-extrabold uppercase text-white shadow-[3px_3px_0px_#08123B] hover:bg-[#0042D9] active:shadow-[1px_1px_0px_#08123B] whitespace-nowrap transition-all"
+            className="hidden sm:flex items-center gap-1.5 rounded-lg border-2 border-[#08123B] bg-[#0052FF] px-3.5 py-1.5 text-xs sm:text-sm font-display font-extrabold uppercase text-white shadow-[3px_3px_0px_#08123B] hover:bg-[#0042D9] active:shadow-[1px_1px_0px_#08123B] whitespace-nowrap transition-all"
           >
             <Users className="h-4 w-4 stroke-[2.5]" />
             <span>MATCH TEAM</span>
@@ -128,3 +225,4 @@ export function Header({
     </header>
   );
 }
+

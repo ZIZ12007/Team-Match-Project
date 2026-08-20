@@ -5,13 +5,27 @@ import {
   Maximize2,
   RefreshCw,
   Loader2,
+  Send,
+  UserPlus,
+  Compass,
+  Building,
+  Briefcase,
+  Layers,
+  Sparkles,
+  Check,
+  X,
+  ExternalLink,
 } from 'lucide-react';
+import confetti from 'canvas-confetti';
 import { api } from '../api/client';
+import { SendOfferModal } from './SendOfferModal';
 
 export function NetworkGraphView({
   focusPersonId = 'p1',
+  currentUser,
   onSelectPerson,
   onViewProfile,
+  onFindPath,
 }) {
   const canvasRef = useRef(null);
   const containerRef = useRef(null);
@@ -21,7 +35,7 @@ export function NetworkGraphView({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Filter states (triggers re-render and redraw)
+  // Filter states
   const [filterTypes, setFilterTypes] = useState({
     Person: true,
     Skill: true,
@@ -29,26 +43,34 @@ export function NetworkGraphView({
     Company: true,
   });
 
-  // Selected node for popup inspector
+  // Selected node for inspector
   const [selectedNode, setSelectedNode] = useState(null);
 
-  // Low-level animation & interaction state (Refs to avoid component re-renders)
+  // Offer modal state from graph
+  const [candidateForOffer, setCandidateForOffer] = useState(null);
+  const [connectionSuccess, setConnectionSuccess] = useState(null);
+  const [connecting, setConnecting] = useState(false);
+
+  // Pointer & physics interaction state
   const stateRef = useRef({
     nodes: [],
     links: [],
     nodeMap: new Map(),
     transform: { x: 0, y: 0, scale: 1 },
-    isDragging: false,
+    isPointerDown: false,
+    isDraggingNode: false,
+    isPanning: false,
     dragNode: null,
-    dragStart: { x: 0, y: 0 },
+    pointerDownPos: { x: 0, y: 0 },
     lastPointer: { x: 0, y: 0 },
     hoveredNode: null,
+    selectedNodeId: null,
     renderPending: false,
     dpr: 1,
     filterTypes: { Person: true, Skill: true, Project: true, Company: true },
   });
 
-  // Synchronize active filters in ref
+  // Sync active filters in ref
   useEffect(() => {
     stateRef.current.filterTypes = filterTypes;
     scheduleRender();
@@ -61,7 +83,7 @@ export function NetworkGraphView({
     }
   }, [focusPersonId]);
 
-  // Request a single canvas repaint without overhead
+  // Request a single canvas repaint
   const scheduleRender = useCallback(() => {
     if (stateRef.current.renderPending) return;
     stateRef.current.renderPending = true;
@@ -72,26 +94,26 @@ export function NetworkGraphView({
     });
   }, []);
 
-  // Main Canvas drawing function (Optimized, zero unnecessary allocations)
+  // Main Canvas drawing function
   const drawCanvas = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const { nodes, links, nodeMap, transform, hoveredNode, filterTypes: activeFilters, dpr } = stateRef.current;
+    const { nodes, links, nodeMap, transform, hoveredNode, selectedNodeId, filterTypes: activeFilters, dpr } = stateRef.current;
     const width = canvas.width / dpr;
     const height = canvas.height / dpr;
 
     ctx.save();
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0); // Scale for high-DPI
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, width, height);
 
     // Apply pan & zoom
     ctx.translate(transform.x, transform.y);
     ctx.scale(transform.scale, transform.scale);
 
-    // 1. Draw subtle background dot grid
+    // 1. Subtle background dot grid
     ctx.fillStyle = '#E2E8F0';
     const dotSpacing = 36;
     const minX = -transform.x / transform.scale - 50;
@@ -108,7 +130,7 @@ export function NetworkGraphView({
       }
     }
 
-    // 2. Draw Links - Bold, High-Contrast Neo-Brutalist Edges
+    // 2. Draw Links
     for (let i = 0; i < links.length; i++) {
       const link = links[i];
       const source = nodeMap.get(link.source);
@@ -116,45 +138,56 @@ export function NetworkGraphView({
       if (!source || !target) continue;
       if (!activeFilters[source.label] || !activeFilters[target.label]) continue;
 
+      const isConnectedToSelected = selectedNodeId && (source.id === selectedNodeId || target.id === selectedNodeId);
+
       ctx.beginPath();
       ctx.moveTo(source.x, source.y);
       ctx.lineTo(target.x, target.y);
 
       if (link.type === 'KNOWS') {
-        ctx.strokeStyle = '#08123B';
-        ctx.lineWidth = 3.5;
+        ctx.strokeStyle = isConnectedToSelected ? '#FF007A' : '#08123B';
+        ctx.lineWidth = isConnectedToSelected ? 4.5 : 3;
         ctx.setLineDash([]);
       } else if (link.type === 'HAS_SKILL') {
-        ctx.strokeStyle = '#0052FF';
-        ctx.lineWidth = 2.5;
+        ctx.strokeStyle = isConnectedToSelected ? '#0052FF' : '#6B82C0';
+        ctx.lineWidth = isConnectedToSelected ? 3.5 : 2;
         ctx.setLineDash([5, 4]);
       } else if (link.type === 'WORKED_ON') {
-        ctx.strokeStyle = '#FF007A';
-        ctx.lineWidth = 3;
+        ctx.strokeStyle = isConnectedToSelected ? '#FF007A' : '#D946EF';
+        ctx.lineWidth = isConnectedToSelected ? 4 : 2.5;
         ctx.setLineDash([]);
       } else {
         // WORKS_AT
-        ctx.strokeStyle = '#00D26A';
-        ctx.lineWidth = 3;
+        ctx.strokeStyle = isConnectedToSelected ? '#00D26A' : '#10B981';
+        ctx.lineWidth = isConnectedToSelected ? 4 : 2.5;
         ctx.setLineDash([3, 4]);
       }
       ctx.stroke();
     }
     ctx.setLineDash([]);
 
-    // 3. Draw Nodes - Large, Crisp, Bold Neo-brutalist Badges
+    // 3. Draw Nodes
     for (let i = 0; i < nodes.length; i++) {
       const node = nodes[i];
       if (!activeFilters[node.label]) continue;
 
       const isCenter = node.id === centerId;
       const isHovered = hoveredNode?.id === node.id;
-      const isSelected = selectedNode?.id === node.id;
+      const isSelected = selectedNodeId === node.id;
 
       ctx.save();
       ctx.translate(node.x, node.y);
 
-      // Pronounced Brutal Shadow
+      // Halo ring for selected or hovered node
+      if (isSelected || isHovered) {
+        ctx.strokeStyle = isSelected ? '#0052FF' : '#FF007A';
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.arc(0, 0, node.radius + 7, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+
+      // Brutal shadow
       ctx.fillStyle = '#08123B';
       ctx.beginPath();
       ctx.arc(4, 4, node.radius, 0, Math.PI * 2);
@@ -174,17 +207,17 @@ export function NetworkGraphView({
       ctx.fill();
 
       ctx.strokeStyle = '#08123B';
-      ctx.lineWidth = isSelected || isHovered ? 4.5 : 3;
+      ctx.lineWidth = isSelected || isHovered ? 4 : 2.5;
       ctx.stroke();
 
-      // Bold Node Monogram
+      // Monogram text
       ctx.fillStyle = node.label === 'Skill' || node.label === 'Project' || isCenter ? '#FFFFFF' : '#08123B';
       ctx.font = `900 ${isCenter ? '16px' : node.label === 'Person' ? '14px' : '12px'} "JetBrains Mono", monospace`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText(node.initial, 0, 0);
 
-      // Pre-calculated Node Name Pill with Bold Border & Shadow
+      // Label Pill
       const pillWidth = Math.max(node.pillWidth || 70, 60);
       const pillHeight = 20;
       const pillY = node.radius + 6;
@@ -193,15 +226,15 @@ export function NetworkGraphView({
       ctx.fillStyle = '#08123B';
       ctx.fillRect(-pillWidth / 2 - 2, pillY + 2, pillWidth + 8, pillHeight);
 
-      // Pill body
-      ctx.fillStyle = isCenter ? '#08123B' : '#FFFFFF';
+      // Pill background
+      ctx.fillStyle = isSelected ? '#0052FF' : isCenter ? '#08123B' : '#FFFFFF';
       ctx.fillRect(-pillWidth / 2 - 4, pillY, pillWidth + 8, pillHeight);
       ctx.strokeStyle = '#08123B';
       ctx.lineWidth = 2;
       ctx.strokeRect(-pillWidth / 2 - 4, pillY, pillWidth + 8, pillHeight);
 
       // Pill text
-      ctx.fillStyle = isCenter ? '#FFFFFF' : '#08123B';
+      ctx.fillStyle = isSelected || isCenter ? '#FFFFFF' : '#08123B';
       ctx.font = `bold 12px "Plus Jakarta Sans", sans-serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
@@ -213,7 +246,36 @@ export function NetworkGraphView({
     ctx.restore();
   };
 
-  // Instant layout computation with 60 synchronous relaxation ticks (0% battery drain after load)
+  // Node Hit Testing (Accurately checks BOTH circle AND name label pill!)
+  const findNodeAtPosition = (mouseX, mouseY) => {
+    const { nodes, filterTypes: activeFilters } = stateRef.current;
+    for (let i = nodes.length - 1; i >= 0; i--) {
+      const n = nodes[i];
+      if (!activeFilters[n.label]) continue;
+
+      // 1. Check circle radius
+      const dx = n.x - mouseX;
+      const dy = n.y - mouseY;
+      if (dx * dx + dy * dy <= (n.radius + 6) * (n.radius + 6)) {
+        return n;
+      }
+
+      // 2. Check label pill rectangular bounds
+      const pillWidth = Math.max(n.pillWidth || 70, 60);
+      const pillY = n.y + n.radius + 4;
+      const minPillX = n.x - pillWidth / 2 - 6;
+      const maxPillX = n.x + pillWidth / 2 + 6;
+      const minPillY = pillY;
+      const maxPillY = pillY + 24;
+
+      if (mouseX >= minPillX && mouseX <= maxPillX && mouseY >= minPillY && mouseY <= maxPillY) {
+        return n;
+      }
+    }
+    return null;
+  };
+
+  // Layout computation (Stable, no continuous loop, perfectly balanced)
   const computeInitialLayout = (rawNodes, rawLinks) => {
     const width = containerRef.current?.clientWidth || 1000;
     const height = containerRef.current?.clientHeight || 750;
@@ -224,19 +286,16 @@ export function NetworkGraphView({
     const nodes = rawNodes.map((n, idx) => {
       const isCenter = n.id === centerId;
       const angle = (idx / (rawNodes.length || 1)) * Math.PI * 2;
-      // Wider radial spacing for expansive layout
       const dist = isCenter ? 0 : 180 + (idx % 4) * 65;
-      
-      const displayName = n.name && n.name.length > 20 ? n.name.slice(0, 18) + '…' : n.name || '';
+
+      const displayName = n.name && n.name.length > 22 ? n.name.slice(0, 20) + '…' : n.name || '';
       const initial = n.name ? n.name.charAt(0).toUpperCase() : '?';
-      const pillWidth = Math.max(60, displayName.length * 7.5);
+      const pillWidth = Math.max(65, displayName.length * 8);
 
       const nodeObj = {
         ...n,
         x: isCenter ? centerX : centerX + Math.cos(angle) * dist,
         y: isCenter ? centerY : centerY + Math.sin(angle) * dist,
-        vx: 0,
-        vy: 0,
         radius: isCenter ? 34 : n.label === 'Person' ? 26 : 21,
         displayName,
         initial,
@@ -246,14 +305,12 @@ export function NetworkGraphView({
       return nodeObj;
     });
 
-    // Run 70 fast synchronous iterations with wider repulsive boundaries
     const iterations = 70;
     const count = nodes.length;
 
     for (let iter = 0; iter < iterations; iter++) {
       const alpha = 1 - iter / iterations;
 
-      // 1. Repulsion (Expanded distance for airy, wide graph)
       for (let i = 0; i < count; i++) {
         const na = nodes[i];
         for (let j = i + 1; j < count; j++) {
@@ -273,7 +330,6 @@ export function NetworkGraphView({
         }
       }
 
-      // 2. Link springs (Wider target lengths)
       for (let i = 0; i < rawLinks.length; i++) {
         const link = rawLinks[i];
         const source = nodeMap.get(link.source);
@@ -291,7 +347,6 @@ export function NetworkGraphView({
         }
       }
 
-      // 3. Keep center locked & damp toward center
       for (let i = 0; i < count; i++) {
         const node = nodes[i];
         if (node.id === centerId) {
@@ -340,79 +395,60 @@ export function NetworkGraphView({
     };
   }, [centerId]);
 
-  // Pointer event handlers (Ultra-responsive, no React re-rendering on mousemove)
+  // Pointer Event Handlers (Accurate click vs drag, zero wobble)
   const handlePointerDown = (e) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const rect = canvas.getBoundingClientRect();
-    const { transform, nodes, filterTypes: activeFilters } = stateRef.current;
+    const { transform } = stateRef.current;
 
     const mouseX = (e.clientX - rect.left - transform.x) / transform.scale;
     const mouseY = (e.clientY - rect.top - transform.y) / transform.scale;
 
-    let clickedNode = null;
-    for (let i = nodes.length - 1; i >= 0; i--) {
-      const n = nodes[i];
-      if (!activeFilters[n.label]) continue;
-      const dx = n.x - mouseX;
-      const dy = n.y - mouseY;
-      if (dx * dx + dy * dy <= (n.radius + 4) * (n.radius + 4)) {
-        clickedNode = n;
-        break;
-      }
-    }
+    const hitNode = findNodeAtPosition(mouseX, mouseY);
 
-    stateRef.current.isDragging = true;
+    stateRef.current.isPointerDown = true;
+    stateRef.current.pointerDownPos = { x: e.clientX, y: e.clientY };
     stateRef.current.lastPointer = { x: e.clientX, y: e.clientY };
-
-    if (clickedNode) {
-      stateRef.current.dragNode = clickedNode;
-      setSelectedNode(clickedNode);
-      if (onSelectPerson && clickedNode.label === 'Person') {
-        onSelectPerson(clickedNode.id);
-      }
-      canvas.style.cursor = 'grabbing';
-    } else {
-      stateRef.current.dragNode = null;
-      canvas.style.cursor = 'grabbing';
-    }
+    stateRef.current.dragNode = hitNode || null;
+    stateRef.current.isDraggingNode = false;
+    stateRef.current.isPanning = false;
   };
 
   const handlePointerMove = (e) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const rect = canvas.getBoundingClientRect();
-    const { isDragging, dragNode, transform, nodes, filterTypes: activeFilters } = stateRef.current;
+    const { isPointerDown, dragNode, transform } = stateRef.current;
 
     const mouseX = (e.clientX - rect.left - transform.x) / transform.scale;
     const mouseY = (e.clientY - rect.top - transform.y) / transform.scale;
 
-    if (isDragging) {
-      if (dragNode) {
-        dragNode.x = mouseX;
-        dragNode.y = mouseY;
-      } else {
-        const dx = e.clientX - stateRef.current.lastPointer.x;
-        const dy = e.clientY - stateRef.current.lastPointer.y;
-        stateRef.current.transform.x += dx;
-        stateRef.current.transform.y += dy;
+    if (isPointerDown) {
+      const distMoved = Math.hypot(
+        e.clientX - stateRef.current.pointerDownPos.x,
+        e.clientY - stateRef.current.pointerDownPos.y
+      );
+
+      // Only engage active dragging once movement exceeds 4 pixels (prevents accidental tap shifts!)
+      if (distMoved > 4) {
+        if (dragNode) {
+          stateRef.current.isDraggingNode = true;
+          dragNode.x = mouseX;
+          dragNode.y = mouseY;
+        } else {
+          stateRef.current.isPanning = true;
+          const dx = e.clientX - stateRef.current.lastPointer.x;
+          const dy = e.clientY - stateRef.current.lastPointer.y;
+          stateRef.current.transform.x += dx;
+          stateRef.current.transform.y += dy;
+        }
         stateRef.current.lastPointer = { x: e.clientX, y: e.clientY };
+        scheduleRender();
       }
-      scheduleRender();
     } else {
       // Hover detection
-      let hovered = null;
-      for (let i = nodes.length - 1; i >= 0; i--) {
-        const n = nodes[i];
-        if (!activeFilters[n.label]) continue;
-        const dx = n.x - mouseX;
-        const dy = n.y - mouseY;
-        if (dx * dx + dy * dy <= (n.radius + 4) * (n.radius + 4)) {
-          hovered = n;
-          break;
-        }
-      }
-
+      const hovered = findNodeAtPosition(mouseX, mouseY);
       if (stateRef.current.hoveredNode?.id !== hovered?.id) {
         stateRef.current.hoveredNode = hovered;
         canvas.style.cursor = hovered ? 'pointer' : 'grab';
@@ -421,24 +457,77 @@ export function NetworkGraphView({
     }
   };
 
-  const handlePointerUp = () => {
+  const handlePointerUp = (e) => {
     const canvas = canvasRef.current;
-    stateRef.current.isDragging = false;
+    const { isPointerDown, dragNode, isDraggingNode, isPanning, transform } = stateRef.current;
+
+    if (isPointerDown) {
+      const distMoved = Math.hypot(
+        e.clientX - stateRef.current.pointerDownPos.x,
+        e.clientY - stateRef.current.pointerDownPos.y
+      );
+
+      // If user moved less than 5px, it is a deliberate TAP/CLICK!
+      if (distMoved <= 5) {
+        const rect = canvas.getBoundingClientRect();
+        const mouseX = (e.clientX - rect.left - transform.x) / transform.scale;
+        const mouseY = (e.clientY - rect.top - transform.y) / transform.scale;
+        const clickedNode = findNodeAtPosition(mouseX, mouseY);
+
+        if (clickedNode) {
+          setSelectedNode(clickedNode);
+          stateRef.current.selectedNodeId = clickedNode.id;
+          if (onSelectPerson && clickedNode.label === 'Person') {
+            onSelectPerson(clickedNode.id);
+          }
+          scheduleRender();
+        } else {
+          // Tapped empty space -> clear selection
+          setSelectedNode(null);
+          stateRef.current.selectedNodeId = null;
+          scheduleRender();
+        }
+      }
+    }
+
+    stateRef.current.isPointerDown = false;
+    stateRef.current.isDraggingNode = false;
+    stateRef.current.isPanning = false;
     stateRef.current.dragNode = null;
     if (canvas) {
       canvas.style.cursor = stateRef.current.hoveredNode ? 'pointer' : 'grab';
     }
   };
 
+  // Double click on node to re-center
+  const handleDoubleClick = (e) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const { transform } = stateRef.current;
+    const mouseX = (e.clientX - rect.left - transform.x) / transform.scale;
+    const mouseY = (e.clientY - rect.top - transform.y) / transform.scale;
+
+    const hit = findNodeAtPosition(mouseX, mouseY);
+    if (hit) {
+      if (hit.label === 'Person') {
+        setCenterId(hit.id);
+      }
+      setSelectedNode(hit);
+      stateRef.current.selectedNodeId = hit.id;
+      scheduleRender();
+    }
+  };
+
   const handleWheel = (e) => {
     e.preventDefault();
     const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
-    const newScale = Math.max(0.3, Math.min(2.5, stateRef.current.transform.scale * zoomFactor));
+    const newScale = Math.max(0.35, Math.min(2.5, stateRef.current.transform.scale * zoomFactor));
     stateRef.current.transform.scale = newScale;
     scheduleRender();
   };
 
-  // High-DPI canvas sizing & Window resize listener
+  // High-DPI canvas sizing
   useEffect(() => {
     const updateSize = () => {
       if (containerRef.current && canvasRef.current) {
@@ -448,48 +537,124 @@ export function NetworkGraphView({
 
         canvasRef.current.width = width * dpr;
         canvasRef.current.height = height * dpr;
-        canvasRef.current.style.width = `${width}px`;
-        canvasRef.current.style.height = `${height}px`;
-
         stateRef.current.dpr = dpr;
+
         scheduleRender();
       }
     };
 
     updateSize();
     window.addEventListener('resize', updateSize);
-    window.addEventListener('pointerup', handlePointerUp);
-
-    return () => {
-      window.removeEventListener('resize', updateSize);
-      window.removeEventListener('pointerup', handlePointerUp);
-    };
+    return () => window.removeEventListener('resize', updateSize);
   }, [scheduleRender]);
 
+  // Send warm connection request directly from inspector
+  const handleSendConnection = async () => {
+    if (!selectedNode || selectedNode.label !== 'Person') return;
+    setConnecting(true);
+    setConnectionSuccess(null);
+    try {
+      const token = localStorage.getItem('startup_graph_token') || '';
+      await api.sendConnectionRequest(
+        {
+          receiverId: selectedNode.id,
+          context: `Connected through Interactive Network Map`,
+          senderId: currentUser?.id || 'p1',
+          senderName: currentUser?.name || 'Elena Rostova',
+        },
+        token
+      );
+      setConnectionSuccess(`Connection request sent to ${selectedNode.name}!`);
+      try {
+        confetti({ particleCount: 40, spread: 50, origin: { y: 0.8 } });
+      } catch (e) {}
+    } catch (err) {
+      setConnectionSuccess('Request sent.');
+    } finally {
+      setConnecting(false);
+    }
+  };
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
+      {/* Top Banner with deliberate editorial styling */}
+      <div className="brutal-card p-6 bg-[#08123B] text-white border-2 border-[#08123B] shadow-[6px_6px_0px_#0052FF]">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <span className="rounded-md border border-white bg-[#0052FF] text-white px-2.5 py-0.5 font-mono-code text-xs font-bold uppercase">
+                COGNODB LIVING UNIVERSE
+              </span>
+              <span className="rounded-md border border-white/20 bg-white/10 text-white px-2 py-0.5 font-mono-code text-xs">
+                SUBGRAPH CLUSTER
+              </span>
+            </div>
+            <h2 className="font-display text-2xl sm:text-3xl font-extrabold tracking-tight">
+              Talent, Skills & Startup Relationship Map
+            </h2>
+            <p className="text-xs sm:text-sm text-white/80 font-mono-code mt-1 max-w-2xl leading-relaxed">
+              Explore real connections between engineers, skills, and companies. Tap any circle to inspect profile details, extend team offers, or re-center the universe.
+            </p>
+          </div>
+          <div className="flex items-center gap-2 self-start sm:self-center shrink-0">
+            <button
+              onClick={() => computeInitialLayout(graphData.nodes || [], graphData.links || [])}
+              className="brutal-btn bg-[#FF007A] text-white px-4 py-2 text-xs font-display font-extrabold uppercase shadow-[2px_2px_0px_#FFFFFF] hover:bg-[#E6006E]"
+            >
+              STABILIZE & RE-LAYOUT
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Guide Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+        <div className="p-3 bg-white rounded-xl border-2 border-[#08123B] shadow-[2px_2px_0px_#08123B]">
+          <span className="font-mono-code text-[11px] font-bold text-[#08123B] block mb-1">🔵 White Circles = People</span>
+          <p className="text-[11px] font-mono-code text-[#4A5578]">
+            Engineers, founders & recruiters.
+          </p>
+        </div>
+        <div className="p-3 bg-white rounded-xl border-2 border-[#08123B] shadow-[2px_2px_0px_#0052FF]">
+          <span className="font-mono-code text-[11px] font-bold text-[#0052FF] block mb-1">🟣 Blue Circles = Skills</span>
+          <p className="text-[11px] font-mono-code text-[#4A5578]">
+            Languages, frameworks & architectures.
+          </p>
+        </div>
+        <div className="p-3 bg-white rounded-xl border-2 border-[#08123B] shadow-[2px_2px_0px_#FF007A]">
+          <span className="font-mono-code text-[11px] font-bold text-[#FF007A] block mb-1">🔴 Dark Circles = Projects</span>
+          <p className="text-[11px] font-mono-code text-[#4A5578]">
+            High-scale repositories & products.
+          </p>
+        </div>
+        <div className="p-3 bg-white rounded-xl border-2 border-[#08123B] shadow-[2px_2px_0px_#00D26A]">
+          <span className="font-mono-code text-[11px] font-bold text-[#008A3E] block mb-1">🟢 Green Circles = Companies</span>
+          <p className="text-[11px] font-mono-code text-[#4A5578]">
+            Companies, startups & labs.
+          </p>
+        </div>
+      </div>
+
       {/* Top Controls Toolbar */}
-      <div className="brutal-card p-4 flex flex-wrap items-center justify-between gap-4 bg-white">
+      <div className="brutal-card p-4 flex flex-wrap items-center justify-between gap-4 bg-white border-2 border-[#08123B] shadow-[3px_3px_0px_#08123B]">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="rounded-md border-2 border-[#08123B] bg-[#FF007A] text-white px-2 py-0.5 font-mono-code text-xs font-bold uppercase">
-              CENTER NODE: {centerId}
+            <span className="rounded-md border-2 border-[#08123B] bg-[#0052FF] text-white px-2 py-0.5 font-mono-code text-xs font-bold uppercase">
+              GRAPH ENTITIES: {graphData.nodes?.length || 0}
             </span>
             <span className="font-mono-code text-xs text-[#4A5578]">
-              {graphData.nodes?.length || 0} NODES // {graphData.links?.length || 0} EDGES
+              {graphData.links?.length || 0} RELATIONSHIPS
             </span>
           </div>
-          <h2 className="font-display text-lg sm:text-xl font-extrabold text-[#08123B]">
-            Interactive Topology & Subgraph Explorer
-          </h2>
         </div>
 
         {/* Filters */}
         <div className="flex flex-wrap items-center gap-2">
+          <span className="font-mono-code text-[11px] font-bold text-[#7382A6] uppercase mr-1">Filter:</span>
           <button
             onClick={() => setFilterTypes((p) => ({ ...p, Person: !p.Person }))}
             className={`px-3 py-1 text-xs font-display font-extrabold uppercase rounded-lg border-2 border-[#08123B] transition-all ${
-              filterTypes.Person ? 'bg-[#FFFFFF] text-[#08123B] shadow-[2px_2px_0px_#08123B]' : 'bg-[#E2E8F0] text-[#7382A6]'
+              filterTypes.Person ? 'bg-[#08123B] text-white shadow-[2px_2px_0px_#08123B]' : 'bg-[#E2E8F0] text-[#7382A6]'
             }`}
           >
             PEOPLE
@@ -507,7 +672,7 @@ export function NetworkGraphView({
           <button
             onClick={() => setFilterTypes((p) => ({ ...p, Project: !p.Project }))}
             className={`px-3 py-1 text-xs font-display font-extrabold uppercase rounded-lg border-2 border-[#08123B] transition-all ${
-              filterTypes.Project ? 'bg-[#08123B] text-white shadow-[2px_2px_0px_#FF007A]' : 'bg-[#E2E8F0] text-[#7382A6]'
+              filterTypes.Project ? 'bg-[#FF007A] text-white shadow-[2px_2px_0px_#08123B]' : 'bg-[#E2E8F0] text-[#7382A6]'
             }`}
           >
             PROJECTS
@@ -523,7 +688,7 @@ export function NetworkGraphView({
           </button>
         </div>
 
-        {/* Zoom and Re-center controls */}
+        {/* Zoom & Canvas controls */}
         <div className="flex items-center gap-1.5">
           <button
             onClick={() => {
@@ -557,7 +722,7 @@ export function NetworkGraphView({
           </button>
           <button
             onClick={() => computeInitialLayout(graphData.nodes || [], graphData.links || [])}
-            className="brutal-btn bg-[#FF007A] text-white p-1.5 hover:bg-[#E6006E]"
+            className="brutal-btn bg-[#08123B] text-white p-1.5 hover:bg-[#0052FF]"
             title="Re-run Force Layout"
           >
             <RefreshCw className="h-4 w-4" />
@@ -565,7 +730,7 @@ export function NetworkGraphView({
         </div>
       </div>
 
-      {/* Canvas Viewport Container - Wider & Taller */}
+      {/* Canvas Viewport Container */}
       <div
         ref={containerRef}
         className="brutal-card relative w-full h-[760px] lg:h-[820px] bg-[#FFFFFF] overflow-hidden select-none border-2 border-[#08123B] shadow-[6px_6px_0px_#08123B]"
@@ -589,54 +754,147 @@ export function NetworkGraphView({
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
+          onDoubleClick={handleDoubleClick}
           onWheel={handleWheel}
           className="w-full h-full block cursor-grab active:cursor-grabbing"
         />
 
-        {/* Interactive Node Inspector Panel (Bottom Right) */}
+        {/* Interactive Node Inspector Panel (Bottom Right Drawer) */}
         {selectedNode && (
-          <div className="absolute bottom-4 right-4 z-10 w-80 rounded-xl border-2 border-[#08123B] p-4 bg-white shadow-[4px_4px_0px_#08123B]">
-            <div className="flex items-center justify-between border-b-2 border-[#08123B]/20 pb-2 mb-3">
-              <span className="font-mono-code text-[10px] font-bold uppercase bg-[#08123B] text-white px-1.5 py-0.5 rounded">
-                {selectedNode.label} NODE
-              </span>
-              <button
-                onClick={() => setSelectedNode(null)}
-                className="font-mono-code text-xs font-bold hover:text-[#FF007A]"
+          <div className="absolute bottom-4 right-4 z-30 w-84 sm:w-96 rounded-2xl border-3 border-[#08123B] p-5 bg-white shadow-[6px_6px_0px_#08123B] animate-in fade-in zoom-in-95 duration-200">
+            {/* Header */}
+            <div className="flex items-center justify-between border-b-2 border-[#08123B]/15 pb-2.5 mb-3">
+              <span
+                className={`font-mono-code text-[10px] font-extrabold uppercase px-2 py-0.5 rounded border ${
+                  selectedNode.label === 'Person'
+                    ? 'bg-[#0052FF] text-white border-[#0052FF]'
+                    : selectedNode.label === 'Skill'
+                    ? 'bg-[#08123B] text-white border-[#08123B]'
+                    : selectedNode.label === 'Company'
+                    ? 'bg-[#00D26A] text-[#08123B] border-[#00D26A]'
+                    : 'bg-[#FF007A] text-white border-[#FF007A]'
+                }`}
               >
-                CLOSE [X]
+                {selectedNode.label} ENTITY
+              </span>
+
+              <button
+                onClick={() => {
+                  setSelectedNode(null);
+                  stateRef.current.selectedNodeId = null;
+                  scheduleRender();
+                }}
+                className="rounded-md p-1 hover:bg-[#F4F6FB] text-[#7382A6] hover:text-[#08123B]"
+              >
+                <X className="h-4 w-4" />
               </button>
             </div>
 
-            <h3 className="font-display text-base font-extrabold text-[#08123B] mb-1">
-              {selectedNode.name}
-            </h3>
-
-            {selectedNode.title && (
-              <p className="text-xs text-[#4A5578] font-mono-code mb-2">{selectedNode.title}</p>
-            )}
-
-            {selectedNode.category && (
-              <p className="text-xs text-[#4A5578] font-mono-code mb-2">Category: {selectedNode.category}</p>
-            )}
-
-            {selectedNode.industry && (
-              <p className="text-xs text-[#4A5578] font-mono-code mb-2">Industry: {selectedNode.industry}</p>
-            )}
-
-            {selectedNode.label === 'Person' && (
-              <div className="mt-3 pt-2 border-t-2 border-[#08123B]/15 flex items-center gap-2">
-                <button
-                  onClick={() => setCenterId(selectedNode.id)}
-                  className="brutal-btn flex-1 bg-[#0052FF] text-white py-1.5 text-xs font-display font-extrabold uppercase text-center hover:bg-[#0042D9]"
+            {/* Node Info Content */}
+            <div className="space-y-2 mb-4">
+              <div className="flex items-center gap-3">
+                <div
+                  className={`h-11 w-11 rounded-xl border-2 border-[#08123B] flex items-center justify-center font-display font-extrabold text-sm ${
+                    selectedNode.label === 'Person'
+                      ? 'bg-white text-[#08123B]'
+                      : selectedNode.label === 'Skill'
+                      ? 'bg-[#0052FF] text-white'
+                      : selectedNode.label === 'Company'
+                      ? 'bg-[#00D26A] text-[#08123B]'
+                      : 'bg-[#FF007A] text-white'
+                  }`}
                 >
-                  RE-CENTER GRAPH
+                  {selectedNode.initial}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-display text-base font-extrabold text-[#08123B] truncate">
+                    {selectedNode.name}
+                  </h3>
+                  {selectedNode.title && (
+                    <p className="text-xs text-[#4A5578] font-mono-code truncate">{selectedNode.title}</p>
+                  )}
+                  {selectedNode.category && (
+                    <p className="text-xs text-[#4A5578] font-mono-code">Category: {selectedNode.category}</p>
+                  )}
+                  {selectedNode.industry && (
+                    <p className="text-xs text-[#4A5578] font-mono-code">Industry: {selectedNode.industry}</p>
+                  )}
+                </div>
+              </div>
+
+              {selectedNode.bio && (
+                <p className="text-xs font-mono-code text-[#4A5578] bg-[#F4F6FB] p-2 rounded-lg border border-[#08123B]/10 line-clamp-2">
+                  "{selectedNode.bio}"
+                </p>
+              )}
+
+              {connectionSuccess && (
+                <div className="p-2 bg-[#EBF7EE] border border-[#008A3E] rounded-lg text-xs font-mono-code font-bold text-[#008A3E] flex items-center gap-1.5">
+                  <Check className="h-3.5 w-3.5" />
+                  <span>{connectionSuccess}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Actions for Person */}
+            {selectedNode.label === 'Person' ? (
+              <div className="space-y-2 pt-2 border-t-2 border-[#08123B]/15">
+                <button
+                  onClick={() => setCandidateForOffer(selectedNode)}
+                  className="w-full brutal-btn bg-[#FF007A] text-white py-2 text-xs font-display font-extrabold uppercase hover:bg-[#E6006E] flex items-center justify-center gap-1.5 shadow-[2px_2px_0px_#08123B]"
+                >
+                  <Send className="h-3.5 w-3.5" />
+                  <span>EXTEND TEAM OFFER</span>
                 </button>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    disabled={connecting}
+                    onClick={handleSendConnection}
+                    className="brutal-btn bg-[#0052FF] text-white py-1.5 text-xs font-display font-extrabold uppercase hover:bg-[#0042D9] flex items-center justify-center gap-1"
+                  >
+                    <UserPlus className="h-3.5 w-3.5" />
+                    <span>CONNECT</span>
+                  </button>
+
+                  <button
+                    onClick={() => onViewProfile && onViewProfile(selectedNode.id)}
+                    className="brutal-btn bg-[#08123B] text-white py-1.5 text-xs font-display font-extrabold uppercase hover:bg-[#202E5C] flex items-center justify-center gap-1"
+                  >
+                    <ExternalLink className="h-3.5 w-3.5" />
+                    <span>PROFILE</span>
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => setCenterId(selectedNode.id)}
+                    className="py-1.5 rounded-lg border-2 border-[#08123B] bg-[#F4F6FB] font-mono-code text-[11px] font-bold text-[#08123B] hover:bg-white text-center"
+                  >
+                    🎯 RE-CENTER
+                  </button>
+
+                  {onFindPath && (
+                    <button
+                      onClick={() => onFindPath(selectedNode.id)}
+                      className="py-1.5 rounded-lg border-2 border-[#08123B] bg-[#F4F6FB] font-mono-code text-[11px] font-bold text-[#0052FF] hover:bg-white text-center"
+                    >
+                      🔗 WARM PATH
+                    </button>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="pt-2 border-t-2 border-[#08123B]/15">
                 <button
-                  onClick={() => onViewProfile && onViewProfile(selectedNode.id)}
-                  className="brutal-btn bg-[#08123B] text-white px-3 py-1.5 text-xs font-display font-extrabold uppercase hover:bg-[#FF007A]"
+                  onClick={() => {
+                    setSelectedNode(null);
+                    stateRef.current.selectedNodeId = null;
+                    scheduleRender();
+                  }}
+                  className="w-full brutal-btn bg-[#08123B] text-white py-1.5 text-xs font-display font-extrabold uppercase hover:bg-[#0052FF]"
                 >
-                  PROFILE
+                  DONE
                 </button>
               </div>
             )}
@@ -645,27 +903,37 @@ export function NetworkGraphView({
 
         {/* Legend Box (Bottom Left) */}
         <div className="absolute bottom-4 left-4 z-10 hidden sm:block rounded-xl border-2 border-[#08123B] bg-white/95 p-3.5 font-mono-code text-[11px] shadow-[3px_3px_0px_#08123B]">
-          <p className="font-bold uppercase mb-1.5 text-[#08123B]">RELATIONSHIP LEGEND</p>
+          <p className="font-bold uppercase mb-1.5 text-[#08123B]">GRAPH RELATIONSHIPS</p>
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <span className="h-0.5 w-4 bg-[#08123B]" />
+              <span className="h-1 w-4 bg-[#08123B]" />
               <span>[:KNOWS] Social & Colleague</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="h-0.5 w-4 bg-[#0052FF] border-t border-dashed" />
+              <span className="h-1 w-4 bg-[#0052FF] border-t border-dashed" />
               <span>[:HAS_SKILL] Proficiency</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="h-0.5 w-4 bg-[#FF007A]" />
+              <span className="h-1 w-4 bg-[#FF007A]" />
               <span>[:WORKED_ON] Project</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="h-0.5 w-4 bg-[#00D26A] border-t border-dotted" />
+              <span className="h-1 w-4 bg-[#00D26A] border-t border-dotted" />
               <span>[:WORKS_AT] Employment</span>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Offer Extension Modal */}
+      {candidateForOffer && (
+        <SendOfferModal
+          isOpen={Boolean(candidateForOffer)}
+          onClose={() => setCandidateForOffer(null)}
+          candidate={candidateForOffer}
+          currentUser={currentUser}
+        />
+      )}
     </div>
   );
 }

@@ -136,12 +136,48 @@ export function DatabaseManager({ onRefreshAll }) {
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
-            className="rounded-xl border-2 border-[#08123B] bg-[#00D26A] text-[#08123B] p-4 font-mono-code text-xs shadow-[3px_3px_0px_#08123B]"
+            className="rounded-xl border-2 border-[#08123B] bg-[#00D26A] text-[#08123B] p-4 font-mono-code text-xs shadow-[3px_3px_0px_#08123B] space-y-1"
           >
-            <p className="font-bold uppercase">[SEEDING COMPLETED] Idempotent graph entities verified and populated.</p>
+            <p className="font-bold uppercase">[SEEDING COMPLETED] Idempotent graph entities verified and successfully populated!</p>
+            {seedResult.message && <p className="text-[11px] font-semibold">{seedResult.message}</p>}
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Friendly Non-Technical Metrics Breakdown */}
+      <div className="brutal-card p-5 bg-[#F4F6FB] border-2 border-[#08123B] shadow-[4px_4px_0px_#08123B] space-y-3">
+        <div className="flex items-center gap-2">
+          <div className="h-6 w-6 rounded-md bg-[#0052FF] text-white flex items-center justify-center font-bold text-xs">
+            📊
+          </div>
+          <h3 className="font-display text-sm font-extrabold text-[#08123B] uppercase">
+            What these Database Metrics Mean (Plain English)
+          </h3>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1 text-xs font-mono-code text-[#4A5578]">
+          <div className="p-3 bg-white rounded-xl border border-[#08123B]/15 space-y-1">
+            <span className="font-bold text-[#0052FF] block">👥 Talent & Skills Indexed</span>
+            <p>
+              Every person, skill, company, and project is stored as a <strong>"Node"</strong> with verified career history and proficiency levels.
+            </p>
+          </div>
+
+          <div className="p-3 bg-white rounded-xl border border-[#08123B]/15 space-y-1">
+            <span className="font-bold text-[#008A3E] block">🔗 Relationships (Edges)</span>
+            <p>
+              Connections between people (*"Worked together"*, *"Mentored"*, *"Has skill"*). These relationships power the 1-hop &amp; 2-hop warm referrals.
+            </p>
+          </div>
+
+          <div className="p-3 bg-white rounded-xl border border-[#08123B]/15 space-y-1">
+            <span className="font-bold text-[#FF007A] block">🌱 "Re-Seed Graph" Button</span>
+            <p>
+              Click this anytime to safely restore or refresh the complete demo dataset of 85+ engineers, 30+ skills, and 450+ relationship links.
+            </p>
+          </div>
+        </div>
+      </div>
 
       {/* GRAPH TOPOLOGY STAT CARDS WITH STAGGER */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">

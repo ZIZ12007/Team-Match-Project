@@ -2,9 +2,10 @@ import React from 'react';
 import { motion } from 'motion/react';
 import { MapPin, Building2, GitMerge, Network, ArrowUpRight } from 'lucide-react';
 
-export function PersonCard({ person, onViewProfile, onExploreGraph, onFindPath, index = 0 }) {
+export function PersonCard({ person, onViewProfile, onExploreGraph, onFindPath, index = 0, currentUserId }) {
   const skills = person.skills || [];
   const connectionCount = person.connectionCount || 0;
+  const isMe = person.isCurrentUser || (currentUserId && person.id === currentUserId);
 
   return (
     <motion.div
@@ -17,7 +18,9 @@ export function PersonCard({ person, onViewProfile, onExploreGraph, onFindPath, 
         delay: Math.min(index * 0.035, 0.35),
       }}
       whileHover={{ y: -4 }}
-      className="brutal-card flex flex-col justify-between p-5 bg-white group hover:shadow-[6px_6px_0px_#08123B] transition-shadow"
+      className={`brutal-card flex flex-col justify-between p-5 bg-white group hover:shadow-[6px_6px_0px_#08123B] transition-shadow ${
+        isMe ? 'ring-3 ring-[#008A3E] bg-[#FAFCFA]' : ''
+      }`}
     >
       {/* Top Header info */}
       <div>
@@ -38,12 +41,19 @@ export function PersonCard({ person, onViewProfile, onExploreGraph, onFindPath, 
               />
             </motion.div>
             <div>
-              <button
-                onClick={() => onViewProfile(person)}
-                className="text-left font-display text-base sm:text-lg font-extrabold text-[#08123B] hover:text-[#0052FF] transition-colors leading-tight line-clamp-1"
-              >
-                {person.name}
-              </button>
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={() => onViewProfile(person)}
+                  className="text-left font-display text-base sm:text-lg font-extrabold text-[#08123B] hover:text-[#0052FF] transition-colors leading-tight line-clamp-1"
+                >
+                  {person.name}
+                </button>
+                {isMe && (
+                  <span className="px-1.5 py-0.2 rounded bg-[#008A3E] text-white text-[9px] font-mono-code font-bold uppercase">
+                    YOU
+                  </span>
+                )}
+              </div>
               <p className="text-xs font-semibold text-[#4A5578] line-clamp-1 mt-0.5">{person.title}</p>
             </div>
           </div>
@@ -51,9 +61,10 @@ export function PersonCard({ person, onViewProfile, onExploreGraph, onFindPath, 
           {/* Connection badge */}
           <motion.div
             whileHover={{ scale: 1.08 }}
+            title={`${connectionCount} direct colleagues & network connections`}
             className="shrink-0 rounded-md border-2 border-[#08123B] bg-[#FF007A] px-2 py-0.5 text-[10px] font-mono-code font-bold uppercase text-white shadow-[1.5px_1.5px_0px_#08123B]"
           >
-            {connectionCount} KNOWS
+            {connectionCount} CONNECTIONS
           </motion.div>
         </div>
 

@@ -13,10 +13,15 @@ import {
   GraduationCap,
   Loader2,
   Sparkles,
+  Send,
+  UserPlus,
+  Check,
 } from 'lucide-react';
+import confetti from 'canvas-confetti';
 import { api } from '../api/client';
+import { SendOfferModal } from './SendOfferModal';
 
-export function PersonProfileModal({ personId, onClose, onExploreGraph, onFindPath }) {
+export function PersonProfileModal({ personId, onClose, onExploreGraph, onFindPath, currentUser }) {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -26,6 +31,11 @@ export function PersonProfileModal({ personId, onClose, onExploreGraph, onFindPa
   const [multiHopSkill, setMultiHopSkill] = useState('');
   const [multiHopCandidates, setMultiHopCandidates] = useState([]);
   const [loadingMultiHop, setLoadingMultiHop] = useState(false);
+
+  // Offer modal & connection request state
+  const [isOfferModalOpen, setIsOfferModalOpen] = useState(false);
+  const [connectStatus, setConnectStatus] = useState(null);
+  const [connecting, setConnecting] = useState(false);
 
   useEffect(() => {
     if (!personId) return;
@@ -187,7 +197,48 @@ export function PersonProfileModal({ personId, onClose, onExploreGraph, onFindPa
                 </div>
 
                 {/* Direct Action Buttons */}
-                <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                  <motion.button
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.96 }}
+                    onClick={() => setIsOfferModalOpen(true)}
+                    className="brutal-btn bg-[#FF007A] text-white px-3.5 py-2 text-xs font-display font-extrabold uppercase flex items-center justify-center gap-1.5 hover:bg-[#E6006E] shadow-[2px_2px_0px_#08123B]"
+                  >
+                    <Send className="h-4 w-4" />
+                    <span>EXTEND OFFER</span>
+                  </motion.button>
+                  <motion.button
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.96 }}
+                    disabled={connecting}
+                    onClick={async () => {
+                      setConnecting(true);
+                      try {
+                        const token = localStorage.getItem('startup_graph_token') || '';
+                        await api.sendConnectionRequest(
+                          {
+                            receiverId: profile.id,
+                            context: 'Profile discovery connection',
+                            senderId: currentUser?.id || 'p1',
+                            senderName: currentUser?.name || 'Elena Rostova',
+                          },
+                          token
+                        );
+                        setConnectStatus('Request sent!');
+                        try {
+                          confetti({ particleCount: 40, spread: 50, origin: { y: 0.7 } });
+                        } catch (e) {}
+                      } catch (err) {
+                        setConnectStatus('Sent.');
+                      } finally {
+                        setConnecting(false);
+                      }
+                    }}
+                    className="brutal-btn bg-[#008A3E] text-white px-3 py-2 text-xs font-display font-extrabold uppercase flex items-center justify-center gap-1 hover:bg-[#007032]"
+                  >
+                    {connectStatus ? <Check className="h-4 w-4" /> : <UserPlus className="h-4 w-4" />}
+                    <span>{connectStatus || 'CONNECT'}</span>
+                  </motion.button>
                   <motion.button
                     whileHover={{ scale: 1.03 }}
                     whileTap={{ scale: 0.96 }}
@@ -198,7 +249,7 @@ export function PersonProfileModal({ personId, onClose, onExploreGraph, onFindPa
                     className="brutal-btn bg-[#0052FF] text-white px-3.5 py-2 text-xs font-display font-extrabold uppercase flex items-center justify-center gap-1.5 hover:bg-[#0042D9]"
                   >
                     <Network className="h-4 w-4" />
-                    <span>GRAPH VIEW</span>
+                    <span>GRAPH</span>
                   </motion.button>
                   <motion.button
                     whileHover={{ scale: 1.03 }}
@@ -207,10 +258,10 @@ export function PersonProfileModal({ personId, onClose, onExploreGraph, onFindPa
                       onClose();
                       onFindPath(profile.id);
                     }}
-                    className="brutal-btn bg-[#FF007A] text-white px-3.5 py-2 text-xs font-display font-extrabold uppercase flex items-center justify-center gap-1.5 hover:bg-[#E6006E]"
+                    className="brutal-btn bg-[#08123B] text-white px-3.5 py-2 text-xs font-display font-extrabold uppercase flex items-center justify-center gap-1.5 hover:bg-[#202E5C]"
                   >
                     <GitMerge className="h-4 w-4" />
-                    <span>TRACE PATH</span>
+                    <span>PATH</span>
                   </motion.button>
                 </div>
               </div>
@@ -239,7 +290,7 @@ export function PersonProfileModal({ personId, onClose, onExploreGraph, onFindPa
                       className="absolute inset-0 rounded-t-lg border-t-2 border-x-2 border-[#08123B] bg-[#08123B] shadow-[2px_-2px_0px_#0052FF] -z-10"
                     />
                   )}
-                  OVERVIEW & RELATIONS
+                  OVERVIEW & SKILLS
                 </button>
                 <button
                   onClick={() => setActiveTab('multihop')}
@@ -257,7 +308,7 @@ export function PersonProfileModal({ personId, onClose, onExploreGraph, onFindPa
                     />
                   )}
                   <Sparkles className="h-3.5 w-3.5 text-[#FF007A]" />
-                  <span>MULTI-HOP INTEL</span>
+                  <span>WARM INTRO NETWORK (2-HOP)</span>
                 </button>
               </div>
 
@@ -543,6 +594,16 @@ export function PersonProfileModal({ personId, onClose, onExploreGraph, onFindPa
           </motion.button>
         </div>
       </motion.div>
+
+      {/* Offer Modal */}
+      {isOfferModalOpen && profile && (
+        <SendOfferModal
+          isOpen={isOfferModalOpen}
+          onClose={() => setIsOfferModalOpen(false)}
+          candidate={profile}
+          currentUser={currentUser}
+        />
+      )}
     </div>
   );
 }
