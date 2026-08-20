@@ -1,0 +1,973 @@
+%PDF-1.3
+%�߬�
+3 0 obj
+<</Type /Page
+/Parent 1 0 R
+/Resources 2 0 R
+/MediaBox [0 0 595.2799999999999727 841.8899999999999864]
+/Contents 4 0 R
+>>
+endobj
+4 0 obj
+<<
+/Length 10908
+>>
+stream
+0.5670000000000001 w
+0 G
+0.03 0.07 0.23 rg
+45.354330708661422 796.5356692913385359 504.5713385826770718 -107.7165354330708738 re
+f
+1. 0. 0.48 rg
+45.354330708661422 796.5356692913385359 11.3385826771653555 -107.7165354330708738 re
+f
+BT
+/F2 16 Tf
+18.3999999999999986 TL
+1. g
+68.031496062992133 762.5199212598424765 Td
+(COGNODB // STARTUP TEAM MATCHING GRAPH) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+1. 0.784 0.863 rg
+68.031496062992133 739.8427559055118081 Td
+(Complete System Overview, Architecture, Cypher Graph Engine & Feature Guide) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0.784 0.843 1. rg
+68.031496062992133 711.4962992125983874 Td
+(Graph DB: Neo4j / CognoDB Bolt Protocol  |  Format: Declarative Cypher  |  Version: 1.0.0) Tj
+ET
+0.96 0.96 0.98 rg
+45.354330708661422 666.1419685039369369 504.5713385826770718 -22.677165354330711 re
+f
+0.03 0.07 0.23 RG
+1.1338582677165356 w
+45.354330708661422 666.1419685039369369 504.5713385826770718 -22.677165354330711 re
+S
+BT
+/F2 10 Tf
+11.5 TL
+0.031 0.071 0.231 rg
+53.8582677165354369 650.5514173228345953 Td
+(1. EXECUTIVE SUMMARY & PURPOSE) Tj
+ET
+0. 0.32 1. rg
+459.2170078740156782 661.8899999999999864 85.0393700787401627 -14.1732283464566944 re
+f
+BT
+/F2 7 Tf
+8.0499999999999989 TL
+1. g
+464.8862992125983737 651.9687401574802834 Td
+(CORE OVERVIEW) Tj
+ET
+BT
+/F1 9 Tf
+10.3499999999999996 TL
+0.031 0.071 0.231 rg
+45.354330708661422 632.1262204724408775 Td
+(The CognoDB Startup Team Matching Graph is a full-stack, graph-native intelligence platform engineered for tech ecosystems,) Tj
+T* (venture studios, and talent networks. Traditional relational databases \(SQL\) struggle with recursive joins and multi-hop social) Tj
+T* (connectivity, degrading exponentially as network depth increases. This platform leverages native property graph traversal) Tj
+T* (\(Neo4j / CognoDB\) using Cypher queries to discover optimal team compositions, compute warm introduction paths, and model) Tj
+T* (multi-dimensional relationships in sub-millisecond latencies.) Tj
+ET
+0.96 0.96 0.98 rg
+45.354330708661422 561.2600787401573825 504.5713385826770718 -22.677165354330711 re
+f
+0.03 0.07 0.23 RG
+1.1338582677165356 w
+45.354330708661422 561.2600787401573825 504.5713385826770718 -22.677165354330711 re
+S
+BT
+/F2 10 Tf
+11.5 TL
+0.031 0.071 0.231 rg
+53.8582677165354369 545.6695275590550409 Td
+(2. GRAPH TOPOLOGY & DATA MODEL \(PROPERTY GRAPH\)) Tj
+ET
+0. 0.32 1. rg
+459.2170078740156782 557.0081102362204319 85.0393700787401627 -14.1732283464566944 re
+f
+BT
+/F2 7 Tf
+8.0499999999999989 TL
+1. g
+464.8862992125983737 547.086850393700729 Td
+(SCHEMA SPEC) Tj
+ET
+BT
+/F1 8.5 Tf
+9.7749999999999986 TL
+0.29 0.333 0.471 rg
+45.354330708661422 527.2443307086614368 Td
+(The system models a 4-entity property graph with weighted and contextual relationships:) Tj
+ET
+0.03 0.07 0.23 rg
+45.354330708661422 513.0711023622046696 8.5039370078740166 -25.5118110236220517 re
+f
+1. g
+53.8582677165354369 513.0711023622046696 496.067401574803057 -25.5118110236220517 re
+f
+0.86 0.88 0.92 RG
+53.8582677165354369 513.0711023622046696 496.067401574803057 -25.5118110236220517 re
+S
+BT
+/F2 8.5 Tf
+9.7749999999999986 TL
+0.031 0.071 0.231 rg
+62.3622047244094517 497.480551181102328 Td
+(\(:Person\)) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0.29 0.333 0.471 rg
+124.7244094488189035 497.480551181102328 Td
+(Candidates, founders, engineers, and designers with title, experience, location, and avatar.) Tj
+ET
+0. 0.32 1. rg
+45.354330708661422 483.3073228346456176 8.5039370078740166 -25.5118110236220517 re
+f
+1. g
+53.8582677165354369 483.3073228346456176 496.067401574803057 -25.5118110236220517 re
+f
+0.86 0.88 0.92 RG
+53.8582677165354369 483.3073228346456176 496.067401574803057 -25.5118110236220517 re
+S
+BT
+/F2 8.5 Tf
+9.7749999999999986 TL
+0.031 0.071 0.231 rg
+62.3622047244094517 467.716771653543276 Td
+(\(:Skill\)) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0.29 0.333 0.471 rg
+124.7244094488189035 467.716771653543276 Td
+(Technical & domain competencies \(e.g. PyTorch, Distributed Systems, Rust, Product Design\).) Tj
+ET
+1. 0. 0.48 rg
+45.354330708661422 453.5435433070865656 8.5039370078740166 -25.5118110236220517 re
+f
+1. g
+53.8582677165354369 453.5435433070865656 496.067401574803057 -25.5118110236220517 re
+f
+0.86 0.88 0.92 RG
+53.8582677165354369 453.5435433070865656 496.067401574803057 -25.5118110236220517 re
+S
+BT
+/F2 8.5 Tf
+9.7749999999999986 TL
+0.031 0.071 0.231 rg
+62.3622047244094517 437.952992125984224 Td
+(\(:Project\)) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0.29 0.333 0.471 rg
+124.7244094488189035 437.952992125984224 Td
+(Previous ventures, open-source repos, and enterprise apps with completion status.) Tj
+ET
+0. 0.82 0.42 rg
+45.354330708661422 423.7797637795275136 8.5039370078740166 -25.5118110236220517 re
+f
+1. g
+53.8582677165354369 423.7797637795275136 496.067401574803057 -25.5118110236220517 re
+f
+0.86 0.88 0.92 RG
+53.8582677165354369 423.7797637795275136 496.067401574803057 -25.5118110236220517 re
+S
+BT
+/F2 8.5 Tf
+9.7749999999999986 TL
+0.031 0.071 0.231 rg
+62.3622047244094517 408.1892125984251152 Td
+(\(:Company\)) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0.29 0.333 0.471 rg
+124.7244094488189035 408.1892125984251152 Td
+(Current and past employers across AI, FinTech, Autonomous Tech, and Cloud.) Tj
+ET
+BT
+/F2 8 Tf
+9.1999999999999993 TL
+0. 0.322 1. rg
+51.0236220472441033 377.0081102362204319 Td
+([:KNOWS]) Tj
+ET
+BT
+/F2 8 Tf
+9.1999999999999993 TL
+0.031 0.071 0.231 rg
+124.7244094488189035 377.0081102362204319 Td
+(\(Person -> Person\)) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0.29 0.333 0.471 rg
+243.7795275590551398 377.0081102362204319 Td
+(Colleague, co-founder, or advisor connection with relationship context.) Tj
+ET
+BT
+/F2 8 Tf
+9.1999999999999993 TL
+0. 0.322 1. rg
+51.0236220472441033 358.5829133858267141 Td
+([:HAS_SKILL]) Tj
+ET
+BT
+/F2 8 Tf
+9.1999999999999993 TL
+0.031 0.071 0.231 rg
+124.7244094488189035 358.5829133858267141 Td
+(\(Person -> Skill\)) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0.29 0.333 0.471 rg
+243.7795275590551398 358.5829133858267141 Td
+(Skill proficiency \(Expert, Advanced, Intermediate\) with years of experience.) Tj
+ET
+BT
+/F2 8 Tf
+9.1999999999999993 TL
+0. 0.322 1. rg
+51.0236220472441033 340.1577165354329964 Td
+([:WORKED_ON]) Tj
+ET
+BT
+/F2 8 Tf
+9.1999999999999993 TL
+0.031 0.071 0.231 rg
+124.7244094488189035 340.1577165354329964 Td
+(\(Person -> Project\)) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0.29 0.333 0.471 rg
+243.7795275590551398 340.1577165354329964 Td
+(Project contribution with specific role \(Lead Architect, Maintainer, etc.\).) Tj
+ET
+BT
+/F2 8 Tf
+9.1999999999999993 TL
+0. 0.322 1. rg
+51.0236220472441033 321.7325196850392786 Td
+([:WORKS_AT]) Tj
+ET
+BT
+/F2 8 Tf
+9.1999999999999993 TL
+0.031 0.071 0.231 rg
+124.7244094488189035 321.7325196850392786 Td
+(\(Person -> Company\)) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0.29 0.333 0.471 rg
+243.7795275590551398 321.7325196850392786 Td
+(Employment history and past corporate tenures.) Tj
+ET
+0.96 0.96 0.98 rg
+45.354330708661422 303.3073228346455608 504.5713385826770718 -22.677165354330711 re
+f
+0.03 0.07 0.23 RG
+1.1338582677165356 w
+45.354330708661422 303.3073228346455608 504.5713385826770718 -22.677165354330711 re
+S
+BT
+/F2 10 Tf
+11.5 TL
+0.031 0.071 0.231 rg
+53.8582677165354369 287.7167716535432191 Td
+(3. APPLICATION FEATURES & CAPABILITIES) Tj
+ET
+0. 0.32 1. rg
+459.2170078740156782 299.0553543307085533 85.0393700787401627 -14.1732283464566944 re
+f
+BT
+/F2 7 Tf
+8.0499999999999989 TL
+1. g
+464.8862992125983737 289.1340944881889072 Td
+(FEATURE BREAKDOWN) Tj
+ET
+BT
+/F2 9 Tf
+10.3499999999999996 TL
+1. 0. 0.478 rg
+45.354330708661422 269.2915748031495013 Td
+(A. Interactive Network Graph View & Topology Explorer) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0.031 0.071 0.231 rg
+53.8582677165354369 256.5356692913385359 Td
+(*  Dynamic 2D Canvas rendering engine with high-DPI retina display support.) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0.031 0.071 0.231 rg
+53.8582677165354369 244.6301574803148924 Td
+(*  Zero-idle CPU footprint: Synchronous relaxation layout calculations settle in <3ms, stopping battery drain.) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0.031 0.071 0.231 rg
+53.8582677165354369 232.7246456692913625 Td
+(*  Interactive node dragging, real-time panning, smooth wheel-zooming, and focal center re-anchoring.) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0.031 0.071 0.231 rg
+53.8582677165354369 220.819133858267719 Td
+(*  Entity filter chips to dynamically toggle visibility of People, Skills, Projects, and Companies.) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0.031 0.071 0.231 rg
+53.8582677165354369 208.9136220472441892 Td
+(*  Inspector Drawer providing instant 1-hop attribute inspection and direct profile routing.) Tj
+ET
+BT
+/F2 9 Tf
+10.3499999999999996 TL
+1. 0. 0.478 rg
+45.354330708661422 191.338818897637907 Td
+(B. Shortest Path & Warm Introduction Traversal Engine) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0.031 0.071 0.231 rg
+53.8582677165354369 178.5829133858268278 Td
+(*  Executes Cypher shortestPath\(\(a:Person\)-[:KNOWS*..6]-\(b:Person\)\) across graph topologies.) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0.031 0.071 0.231 rg
+53.8582677165354369 166.677401574803298 Td
+(*  Calculates exact degrees of separation \(1st, 2nd, 3rd, 4th degree\).) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0.031 0.071 0.231 rg
+53.8582677165354369 154.7718897637796545 Td
+(*  Extracts edge contexts along the chain \(e.g. "Former co-founders at Voxel", "Stanford AI Lab"\).) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0.031 0.071 0.231 rg
+53.8582677165354369 142.8663779527561246 Td
+(*  Computes trust scores, common mutual colleagues, and structured referral outreach drafts.) Tj
+ET
+BT
+/F2 9 Tf
+10.3499999999999996 TL
+1. 0. 0.478 rg
+45.354330708661422 125.2915748031498424 Td
+(C. Algorithmic Startup Team Matcher) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0.031 0.071 0.231 rg
+53.8582677165354369 112.5356692913387633 Td
+(*  Graph-pattern matching algorithm to assemble balanced multi-disciplinary teams.) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0.031 0.071 0.231 rg
+53.8582677165354369 100.6301574803152334 Td
+(*  Scans candidates with complementary skill matrices \(Frontend, Backend, AI/ML, Design, Product\).) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0.031 0.071 0.231 rg
+53.8582677165354369 88.7246456692915899 Td
+(*  Prioritizes historical working chemistry \(candidates sharing past companies or projects\).) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0.031 0.071 0.231 rg
+53.8582677165354369 76.8191338582680601 Td
+(*  Minimizes social distance: Assembles teams whose members are already 1 or 2 hops apart in the graph.) Tj
+ET
+0.03 0.07 0.23 rg
+45.354330708661422 819.212834645669318 504.5713385826770718 -2.8346456692913389 re
+f
+BT
+/F1 7.5 Tf
+8.625 TL
+0.29 0.333 0.471 rg
+45.354330708661422 22.6771653543306684 Td
+(CognoDB // Startup Team Matching & Graph Database Platform - Technical Documentation) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0.29 0.333 0.471 rg
+498.9020472440944332 22.6771653543306684 Td
+(Page 1 of 2) Tj
+ET
+endstream
+endobj
+5 0 obj
+<</Type /Page
+/Parent 1 0 R
+/Resources 2 0 R
+/MediaBox [0 0 595.2799999999999727 841.8899999999999864]
+/Contents 6 0 R
+>>
+endobj
+6 0 obj
+<<
+/Length 7571
+>>
+stream
+1.1338582677165356 w
+0.03 0.07 0.23 RG
+0.03 0.07 0.23 rg
+45.354330708661422 819.212834645669318 504.5713385826770718 -4.2519685039370083 re
+f
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0.29 0.333 0.471 rg
+45.354330708661422 22.6771653543306684 Td
+(CognoDB // Startup Team Matching & Graph Database Platform - Technical Manual) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0.29 0.333 0.471 rg
+515.9099212598424629 22.6771653543306684 Td
+(Page 2) Tj
+ET
+BT
+/F2 9 Tf
+10.3499999999999996 TL
+1. 0. 0.478 rg
+45.354330708661422 796.5356692913385359 Td
+(D. Talent Graph Directory & Multi-Dimensional Search) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0.031 0.071 0.231 rg
+53.8582677165354369 783.7797637795275705 Td
+(*  Instant multi-filter search across skills, roles, companies, locations, and seniority.) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0.031 0.071 0.231 rg
+53.8582677165354369 771.8742519685039269 Td
+(*  Candidate cards with direct profile expansion detailing all graph edges and historical ventures.) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0.031 0.071 0.231 rg
+53.8582677165354369 759.9687401574802834 Td
+(*  One-click graph re-centering to inspect any candidate�s immediate neighborhood.) Tj
+ET
+BT
+/F2 9 Tf
+10.3499999999999996 TL
+1. 0. 0.478 rg
+45.354330708661422 742.3939370078740012 Td
+(E. Cypher Query Laboratory & SQL Equivalence Benchmark) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0.031 0.071 0.231 rg
+53.8582677165354369 729.6380314960629221 Td
+(*  Interactive Cypher REPL executing live declarative graph queries directly on CognoDB.) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0.031 0.071 0.231 rg
+53.8582677165354369 717.7325196850392786 Td
+(*  Dynamic JSON query parameter editor for testing parameterized queries \($personId, $skillName, etc.\).) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0.031 0.071 0.231 rg
+53.8582677165354369 705.827007874015635 Td
+(*  Head-to-head complexity analysis: Compares O\(d\) pointer dereferencing vs O\(N^d\) SQL recursive CTE joins.) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0.031 0.071 0.231 rg
+53.8582677165354369 693.9214960629921052 Td
+(*  Real-time execution latency tracking in milliseconds and detailed tabular result inspection.) Tj
+ET
+BT
+/F2 9 Tf
+10.3499999999999996 TL
+1. 0. 0.478 rg
+45.354330708661422 676.346692913385823 Td
+(F. Database Management & Schema Inspector) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0.031 0.071 0.231 rg
+53.8582677165354369 663.5907874015747439 Td
+(*  Live connection status indicator \(Neo4j / CognoDB Bolt driver\).) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0.031 0.071 0.231 rg
+53.8582677165354369 651.6852755905511003 Td
+(*  Real-time node and relationship counter displaying total active entities in the database.) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0.031 0.071 0.231 rg
+53.8582677165354369 639.7797637795274568 Td
+(*  One-click seed generator to populate or reset realistic Silicon Valley / AI talent network graphs.) Tj
+ET
+0.96 0.96 0.98 rg
+45.354330708661422 622.2049606299211746 504.5713385826770718 -22.677165354330711 re
+f
+0.03 0.07 0.23 RG
+1.1338582677165356 w
+45.354330708661422 622.2049606299211746 504.5713385826770718 -22.677165354330711 re
+S
+BT
+/F2 10 Tf
+11.5 TL
+0.031 0.071 0.231 rg
+53.8582677165354369 606.614409448818833 Td
+(4. WHY GRAPH DATABASES \(CYPHER VS SQL CTEs\)) Tj
+ET
+0. 0.32 1. rg
+459.2170078740156782 617.952992125984224 85.0393700787401627 -14.1732283464566944 re
+f
+BT
+/F2 7 Tf
+8.0499999999999989 TL
+1. g
+464.8862992125983737 608.0317322834645211 Td
+(PERFORMANCE COMPARISON) Tj
+ET
+BT
+/F1 8.5 Tf
+9.7749999999999986 TL
+0.031 0.071 0.231 rg
+45.354330708661422 588.1892125984251152 Td
+(In relational databases, querying relationships across 2+ hops requires multiple recursive self-joins or WITH RECURSIVE Common) Tj
+T* (Table Expressions \(CTEs\), resulting in exponential join overhead. Graph databases use index-free adjacency where each node points) Tj
+T* (directly to its physical neighbors in memory:) Tj
+ET
+0.03 0.07 0.23 rg
+45.354330708661422 541.1340944881889072 246.6163779527558688 -90.708661417322844 re
+f
+BT
+/F6 7.5 Tf
+8.625 TL
+0. 0.824 0.416 rg
+53.8582677165354369 526.96086614173214 Td
+(// CYPHER \(Declarative Graph Pattern\)) Tj
+ET
+BT
+/F5 6.8 Tf
+7.8199999999999994 TL
+1. g
+53.8582677165354369 509.9529921259841672 Td
+(MATCH path = shortestPath\() Tj
+T* (  \(a:Person {id: $pA}\)-) Tj
+T* (  [:KNOWS*..6]-\(b:Person {id: $pB}\)) Tj
+T* (\)) Tj
+T* (RETURN path, length\(path\);) Tj
+ET
+BT
+/F5 6.8 Tf
+7.8199999999999994 TL
+1. 0.784 0.863 rg
+53.8582677165354369 461.7640157480313974 Td
+(Time: 1.2ms | Complexity: O\(d\)) Tj
+ET
+0.96 0.96 0.98 rg
+303.309291338582625 541.1340944881889072 246.6163779527558688 -90.708661417322844 re
+f
+0.03 0.07 0.23 RG
+303.309291338582625 541.1340944881889072 246.6163779527558688 -90.708661417322844 re
+S
+BT
+/F6 7.5 Tf
+8.625 TL
+1. 0. 0.478 rg
+311.8132283464566399 526.96086614173214 Td
+(-- SQL \(Recursive CTE & Self-Joins\)) Tj
+ET
+BT
+/F5 6.8 Tf
+7.8199999999999994 TL
+0.031 0.071 0.231 rg
+311.8132283464566399 509.9529921259841672 Td
+(WITH RECURSIVE traverse\(p1, p2, depth\) AS \() Tj
+T* (  SELECT src, dst, 1 FROM knows WHERE src=$pA) Tj
+T* (  UNION) Tj
+T* (  SELECT k.src, k.dst, t.depth+1 FROM knows k) Tj
+T* (  JOIN traverse t ON k.src = t.dst) Tj
+T* (  WHERE depth < 6) Tj
+T* (\) SELECT * FROM traverse WHERE p2=$pB;) Tj
+ET
+BT
+/F5 6.8 Tf
+7.8199999999999994 TL
+0.29 0.333 0.471 rg
+311.8132283464566399 461.7640157480313974 Td
+(Time: 48.6ms | Complexity: O\(N^d\)) Tj
+ET
+0.96 0.96 0.98 rg
+45.354330708661422 433.4175590551179766 504.5713385826770718 -22.677165354330711 re
+f
+0.03 0.07 0.23 RG
+1.1338582677165356 w
+45.354330708661422 433.4175590551179766 504.5713385826770718 -22.677165354330711 re
+S
+BT
+/F2 10 Tf
+11.5 TL
+0.031 0.071 0.231 rg
+53.8582677165354369 417.827007874015635 Td
+(5. ARCHITECTURE & TECHNOLOGY STACK) Tj
+ET
+0. 0.32 1. rg
+459.2170078740156782 429.1655905511809692 85.0393700787401627 -14.1732283464566944 re
+f
+BT
+/F2 7 Tf
+8.0499999999999989 TL
+1. g
+464.8862992125983737 419.2443307086613231 Td
+(SYSTEM ARCH) Tj
+ET
+BT
+/F2 8 Tf
+9.1999999999999993 TL
+0.031 0.071 0.231 rg
+51.0236220472441033 388.063228346456583 Td
+([Frontend SPA]) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0.29 0.333 0.471 rg
+158.7401574803149629 388.063228346456583 Td
+(React 19, Tailwind CSS v4, Lucide Icons, Canvas 2D Retina Acceleration) Tj
+ET
+BT
+/F2 8 Tf
+9.1999999999999993 TL
+0.031 0.071 0.231 rg
+51.0236220472441033 371.0553543307085533 Td
+([Backend Server]) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0.29 0.333 0.471 rg
+158.7401574803149629 371.0553543307085533 Td
+(Node.js, Express.js API, RESTful Subgraph & Traversal Endpoints) Tj
+ET
+BT
+/F2 8 Tf
+9.1999999999999993 TL
+0.031 0.071 0.231 rg
+51.0236220472441033 354.0474803149605236 Td
+([Graph Engine]) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0.29 0.333 0.471 rg
+158.7401574803149629 354.0474803149605236 Td
+(Neo4j Driver / CognoDB Bolt Protocol \(Native Cypher Pattern Engine\)) Tj
+ET
+BT
+/F2 8 Tf
+9.1999999999999993 TL
+0.031 0.071 0.231 rg
+51.0236220472441033 337.0396062992124939 Td
+([Algorithms]) Tj
+ET
+BT
+/F1 8 Tf
+9.1999999999999993 TL
+0.29 0.333 0.471 rg
+158.7401574803149629 337.0396062992124939 Td
+(Shortest Path \(Dijkstra / BFS\), Bounded Subgraph Relaxation, Jaccard Skill Clustering) Tj
+ET
+0.03 0.07 0.23 rg
+45.354330708661422 819.212834645669318 504.5713385826770718 -2.8346456692913389 re
+f
+BT
+/F1 7.5 Tf
+8.625 TL
+0.29 0.333 0.471 rg
+45.354330708661422 22.6771653543306684 Td
+(CognoDB // Startup Team Matching & Graph Database Platform - Technical Documentation) Tj
+ET
+BT
+/F1 7.5 Tf
+8.625 TL
+0.29 0.333 0.471 rg
+498.9020472440944332 22.6771653543306684 Td
+(Page 2 of 2) Tj
+ET
+endstream
+endobj
+1 0 obj
+<</Type /Pages
+/Kids [3 0 R 5 0 R ]
+/Count 2
+>>
+endobj
+7 0 obj
+<<
+/Type /Font
+/BaseFont /Helvetica
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+8 0 obj
+<<
+/Type /Font
+/BaseFont /Helvetica-Bold
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+9 0 obj
+<<
+/Type /Font
+/BaseFont /Helvetica-Oblique
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+10 0 obj
+<<
+/Type /Font
+/BaseFont /Helvetica-BoldOblique
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+11 0 obj
+<<
+/Type /Font
+/BaseFont /Courier
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+12 0 obj
+<<
+/Type /Font
+/BaseFont /Courier-Bold
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+13 0 obj
+<<
+/Type /Font
+/BaseFont /Courier-Oblique
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+14 0 obj
+<<
+/Type /Font
+/BaseFont /Courier-BoldOblique
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+15 0 obj
+<<
+/Type /Font
+/BaseFont /Times-Roman
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+16 0 obj
+<<
+/Type /Font
+/BaseFont /Times-Bold
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+17 0 obj
+<<
+/Type /Font
+/BaseFont /Times-Italic
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+18 0 obj
+<<
+/Type /Font
+/BaseFont /Times-BoldItalic
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+19 0 obj
+<<
+/Type /Font
+/BaseFont /ZapfDingbats
+/Subtype /Type1
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+20 0 obj
+<<
+/Type /Font
+/BaseFont /Symbol
+/Subtype /Type1
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+2 0 obj
+<<
+/ProcSet [/PDF /Text /ImageB /ImageC /ImageI]
+/Font <<
+/F1 7 0 R
+/F2 8 0 R
+/F3 9 0 R
+/F4 10 0 R
+/F5 11 0 R
+/F6 12 0 R
+/F7 13 0 R
+/F8 14 0 R
+/F9 15 0 R
+/F10 16 0 R
+/F11 17 0 R
+/F12 18 0 R
+/F13 19 0 R
+/F14 20 0 R
+>>
+/XObject <<
+>>
+>>
+endobj
+21 0 obj
+<<
+/Producer (jsPDF 4.2.1)
+/CreationDate (D:20260819235744-00'00')
+>>
+endobj
+22 0 obj
+<<
+/Type /Catalog
+/Pages 1 0 R
+/OpenAction [3 0 R /FitH null]
+/PageLayout /OneColumn
+>>
+endobj
+xref
+0 23
+0000000000 65535 f 
+0000018873 00000 n 
+0000020698 00000 n 
+0000000015 00000 n 
+0000000152 00000 n 
+0000011113 00000 n 
+0000011250 00000 n 
+0000018936 00000 n 
+0000019061 00000 n 
+0000019191 00000 n 
+0000019324 00000 n 
+0000019462 00000 n 
+0000019586 00000 n 
+0000019715 00000 n 
+0000019847 00000 n 
+0000019983 00000 n 
+0000020111 00000 n 
+0000020238 00000 n 
+0000020367 00000 n 
+0000020500 00000 n 
+0000020602 00000 n 
+0000020948 00000 n 
+0000021034 00000 n 
+trailer
+<<
+/Size 23
+/Root 22 0 R
+/Info 21 0 R
+/ID [ <D854F75DC8FB6C7E40E786B9D6D179AA> <D854F75DC8FB6C7E40E786B9D6D179AA> ]
+>>
+startxref
+21138
+%%EOF

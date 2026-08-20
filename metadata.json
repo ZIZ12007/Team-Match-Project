@@ -1,0 +1,6 @@
+{
+  "name": "Startup Team-Matching Graph",
+  "description": "Graph-powered talent search and startup team-matching platform backed by CognoDB (Neo4j-compatible) with multi-hop traversal, shortest path queries, and interactive network visualization.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
